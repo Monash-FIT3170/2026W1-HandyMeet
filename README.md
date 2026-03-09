@@ -12,3 +12,4 @@ Bita Afshar bitafsh bafs0001@student.monash.edu
 Naveen Rajeev naveenrajeev16 nraj0031@student.monash.edu
 Tam Quan TamvyQuan tqua0013@student.monash.edu
 Shen-Kit Hia shen-kit shia0001@student.monash.edu
+Sinan Ummu sua22 summ0001@student.monash.edu
