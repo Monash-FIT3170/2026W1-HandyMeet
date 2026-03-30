@@ -1,6 +1,6 @@
 # 2026W1-HandyMeet
 
-1. Richard Li RichardLi88 rlii0102@student.monash.edu 
+1. Richard Li RichardLi88 rlii0102@student.monash.edu
 2. Dasun Udugoda Dasun-Udugoda wudu0002@student.monash.edu
 3. May McGrath maymcgrath mmcg0028@student.monash.edu
 4. Michael Alexander mimgl male0019@student.monash.edu
