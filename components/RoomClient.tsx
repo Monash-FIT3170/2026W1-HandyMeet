@@ -56,7 +56,7 @@ export default function RoomClient({
   }
 
   return (
-    <main className="h-screen">
+    <main className="h-screen" data-lk-theme="default">
       <LiveKitRoom
         serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
         token={token}
