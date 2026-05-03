@@ -2,10 +2,13 @@
 
 import {
   Chat,
+  ConnectionStateToast,
   ControlBar,
   GridLayout,
   LayoutContextProvider,
   ParticipantTile,
+  RoomAudioRenderer,
+  StartAudio,
   useCreateLayoutContext,
   useTracks,
 } from '@livekit/components-react';
@@ -46,6 +49,10 @@ export default function MeetingRoom() {
 
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
       </LayoutContextProvider>
+
+      <RoomAudioRenderer />
+      <StartAudio label="Click to allow audio playback" />
+      <ConnectionStateToast />
     </div>
   );
 }
