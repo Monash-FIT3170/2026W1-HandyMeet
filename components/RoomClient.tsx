@@ -1,9 +1,10 @@
 'use client';
 
 import '@livekit/components-styles';
-import { LiveKitRoom, VideoConference } from '@livekit/components-react';
+import { LiveKitRoom } from '@livekit/components-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import MeetingRoom from '@/components/meeting/MeetingRoom';
 
 export default function RoomClient({
   roomName,
@@ -64,7 +65,7 @@ export default function RoomClient({
         audio={true}
         onDisconnected={() => router.push('/')}
       >
-        <VideoConference />
+        <MeetingRoom />
       </LiveKitRoom>
     </main>
   );
