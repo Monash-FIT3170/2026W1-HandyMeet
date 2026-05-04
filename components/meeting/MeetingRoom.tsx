@@ -14,6 +14,7 @@ import {
   StartAudio,
   isTrackReference,
   useCreateLayoutContext,
+  useMaybeTrackRefContext,
   usePinnedTracks,
   useTracks,
 } from '@livekit/components-react';
@@ -23,7 +24,7 @@ import type {
   WidgetState,
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 
 const initialWidgetState: WidgetState = {
@@ -46,17 +47,46 @@ function isSameTrack(
   );
 }
 
-function MeetingTile({ trackRef }: { trackRef?: TrackReferenceOrPlaceholder }) {
-  if (isLocalCameraTrack(trackRef)) {
-    return <LocalCameraTile trackRef={trackRef} />;
+type MeetingTileProps = {
+  trackRef?: TrackReferenceOrPlaceholder;
+  trackingEnabled: boolean;
+  overlayEnabled: boolean;
+  videoRef?: (video: HTMLVideoElement | null) => void;
+  canvasRef?: (canvas: HTMLCanvasElement | null) => void;
+};
+
+function MeetingTile({
+  trackRef,
+  trackingEnabled,
+  overlayEnabled,
+  videoRef,
+  canvasRef,
+}: MeetingTileProps) {
+  const trackRefFromContext = useMaybeTrackRefContext();
+  const resolvedTrackRef = trackRef ?? trackRefFromContext;
+
+  if (isLocalCameraTrack(resolvedTrackRef)) {
+    return (
+      <LocalCameraTile
+        trackRef={resolvedTrackRef}
+        trackingEnabled={trackingEnabled}
+        overlayEnabled={overlayEnabled}
+        videoRef={videoRef}
+        canvasRef={canvasRef}
+      />
+    );
   }
 
-  return <ParticipantTile trackRef={trackRef} />;
+  return <ParticipantTile trackRef={resolvedTrackRef} />;
 }
 
 export default function MeetingRoom() {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
+  const [trackingEnabled] = useState(false);
+  const [overlayEnabled] = useState(false);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const layoutContext = useCreateLayoutContext();
   const autoFocusedScreenShare = useRef<TrackReference | null>(null);
   const tracks = useTracks(
@@ -76,6 +106,12 @@ export default function MeetingRoom() {
   const carouselTracks = tracks.filter(
     (track) => !isSameTrack(track, focusedTrack),
   );
+  const setLocalVideoRef = useCallback((video: HTMLVideoElement | null) => {
+    localVideoRef.current = video;
+  }, []);
+  const setLocalCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
+    localCanvasRef.current = canvas;
+  }, []);
 
   useEffect(() => {
     const subscribedScreenShare = screenShareTracks.find(
@@ -116,15 +152,35 @@ export default function MeetingRoom() {
             <div className="lk-focus-layout-wrapper">
               <FocusLayoutContainer>
                 <CarouselLayout tracks={carouselTracks}>
-                  <MeetingTile />
+                  <MeetingTile
+                    trackingEnabled={trackingEnabled}
+                    overlayEnabled={overlayEnabled}
+                    videoRef={setLocalVideoRef}
+                    canvasRef={setLocalCanvasRef}
+                  />
                 </CarouselLayout>
-                <FocusLayout trackRef={focusedTrack} />
+                {isLocalCameraTrack(focusedTrack) ? (
+                  <LocalCameraTile
+                    trackRef={focusedTrack}
+                    trackingEnabled={trackingEnabled}
+                    overlayEnabled={overlayEnabled}
+                    videoRef={setLocalVideoRef}
+                    canvasRef={setLocalCanvasRef}
+                  />
+                ) : (
+                  <FocusLayout trackRef={focusedTrack} />
+                )}
               </FocusLayoutContainer>
             </div>
           ) : (
             <div className="lk-grid-layout-wrapper">
               <GridLayout tracks={tracks}>
-                <MeetingTile />
+                <MeetingTile
+                  trackingEnabled={trackingEnabled}
+                  overlayEnabled={overlayEnabled}
+                  videoRef={setLocalVideoRef}
+                  canvasRef={setLocalCanvasRef}
+                />
               </GridLayout>
             </div>
           )}
