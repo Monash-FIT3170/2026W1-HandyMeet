@@ -24,6 +24,7 @@ import type {
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
 import { useEffect, useRef, useState } from 'react';
+import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -43,6 +44,14 @@ function isSameTrack(
     track.participant.identity === otherTrack.participant.identity &&
     track.source === otherTrack.source
   );
+}
+
+function MeetingTile({ trackRef }: { trackRef?: TrackReferenceOrPlaceholder }) {
+  if (isLocalCameraTrack(trackRef)) {
+    return <LocalCameraTile trackRef={trackRef} />;
+  }
+
+  return <ParticipantTile trackRef={trackRef} />;
 }
 
 export default function MeetingRoom() {
@@ -107,7 +116,7 @@ export default function MeetingRoom() {
             <div className="lk-focus-layout-wrapper">
               <FocusLayoutContainer>
                 <CarouselLayout tracks={carouselTracks}>
-                  <ParticipantTile />
+                  <MeetingTile />
                 </CarouselLayout>
                 <FocusLayout trackRef={focusedTrack} />
               </FocusLayoutContainer>
@@ -115,7 +124,7 @@ export default function MeetingRoom() {
           ) : (
             <div className="lk-grid-layout-wrapper">
               <GridLayout tracks={tracks}>
-                <ParticipantTile />
+                <MeetingTile />
               </GridLayout>
             </div>
           )}
