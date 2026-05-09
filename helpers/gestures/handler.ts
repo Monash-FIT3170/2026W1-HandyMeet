@@ -29,7 +29,7 @@ const actionEntries: Array<[Action, ActionHandler]> = [
 
 const actionMap = new Map<Action, ActionHandler>(actionEntries);
 
-export const handleGestureAction = async (room: Room, action: Action): Promise<boolean> => {
+export const handleAction = async (room: Room, action: Action): Promise<boolean> => {
   const handler = actionMap.get(action);
 
   if (!handler) {
