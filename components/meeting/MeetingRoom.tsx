@@ -17,6 +17,7 @@ import {
   useMaybeTrackRefContext,
   usePinnedTracks,
   useTracks,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import type {
   TrackReference,
@@ -26,6 +27,7 @@ import type {
 import { RoomEvent, Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
+import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -83,8 +85,9 @@ function MeetingTile({
 export default function MeetingRoom() {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
-  const [trackingEnabled] = useState(false);
-  const [overlayEnabled] = useState(false);
+  const { isCameraEnabled } = useLocalParticipant();
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
+  const [overlayEnabled, setOverlayEnabled] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const layoutContext = useCreateLayoutContext();
@@ -112,6 +115,34 @@ export default function MeetingRoom() {
   const setLocalCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
     localCanvasRef.current = canvas;
   }, []);
+
+  const { isTracking } = useHandLandmarker({
+    videoRef: localVideoRef,
+    canvasRef: localCanvasRef,
+    trackingEnabled,
+    overlayEnabled,
+  });
+
+  useEffect(() => {
+    if (!isCameraEnabled) {
+      setTimeout(() => {
+        setTrackingEnabled(false);
+        setOverlayEnabled(false);
+      }, 0);
+    }
+  }, [isCameraEnabled]);
+
+  function handleToggleTracking() {
+    setTrackingEnabled((prev) => {
+      if (prev) setOverlayEnabled(false);
+      return !prev;
+    });
+  }
+
+  function handleToggleOverlay() {
+    if (!trackingEnabled) return;
+    setOverlayEnabled((prev) => !prev);
+  }
 
   useEffect(() => {
     const subscribedScreenShare = screenShareTracks.find(
@@ -186,6 +217,39 @@ export default function MeetingRoom() {
           )}
 
           <ControlBar controls={{ chat: true, settings: false }} />
+
+          <div className="fixed bottom-24 right-4 flex flex-col gap-2 z-50">
+            <button
+              onClick={handleToggleTracking}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                trackingEnabled
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              {trackingEnabled ? 'Tracking On' : 'Tracking Off'}
+            </button>
+
+            <button
+              onClick={handleToggleOverlay}
+              disabled={!trackingEnabled}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                overlayEnabled
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              {overlayEnabled ? 'Overlay On' : 'Overlay Off'}
+            </button>
+
+            {trackingEnabled && (
+              <p
+                className={`text-xs text-center ${isTracking ? 'text-emerald-400' : 'text-neutral-500'}`}
+              >
+                {isTracking ? 'Hand detected' : 'No hand detected'}
+              </p>
+            )}
+          </div>
         </div>
 
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
