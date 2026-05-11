@@ -29,6 +29,16 @@ const actionEntries: Array<[Action, ActionHandler]> = [
 
 const actionMap = new Map<Action, ActionHandler>(actionEntries);
 
+/**
+ * Processes a gesture or reaction by looking up and executing its associated handler.
+ * 
+ * @param room - The LiveKit room where the action should occur.
+ * @param action - The specific Gesture or Reaction to trigger.
+ * @returns `true` if the action was recognized and executed, `false` otherwise.
+ * 
+ * @example
+ * await handleAction(room, Gesture.Mute);
+ */
 export const handleAction = async (room: Room, action: Action): Promise<boolean> => {
   const handler = actionMap.get(action);
 

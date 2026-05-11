@@ -1,6 +1,11 @@
 import type { Room } from "livekit-client";
 import { Reaction, ReactionTopic } from "../../constants/reactions";
 
+/**
+ * A standard handler for room-related actions.
+ * @param room - The active LiveKit room instance.
+ * @returns A promise that resolves when the action is complete.
+ */
 export type ActionHandler = (room: Room) => Promise<void> | void;
 
 const sendReaction = async (room: Room, reaction: Reaction): Promise<void> => {
@@ -32,7 +37,7 @@ export const sendThumbsUp = async (room: Room): Promise<void> => {
   await sendReaction(room, Reaction.ThumbsUp);
 };
 
-export const sendThumbsDown = async (room: Room): Promise<void> => {
+export const sendThumbsDown = async (room: Room): Promise<void> => {  
   await sendReaction(room, Reaction.ThumbsDown);
 };
 
