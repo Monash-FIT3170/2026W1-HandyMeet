@@ -117,16 +117,11 @@ export function useHandLandmarker({
               { color: '#00FF00', lineWidth: 2 },
             );
 
-            const keyLandmarks = [1, 4, 5, 9, 13, 17, 8, 12, 16, 20];
-
-            drawingUtils.drawLandmarks(
-              landmarks.filter((_, i) => keyLandmarks.includes(i)),
-              {
-                color: '#FF0000',
-                lineWidth: 1,
-                radius: 3,
-              },
-            );
+            drawingUtils.drawLandmarks(landmarks, {
+              color: '#FF0000',
+              lineWidth: 1,
+              radius: 3,
+            });
           }
         }
 

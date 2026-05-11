@@ -33,6 +33,7 @@ import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import TranscriptSummary from '@/components/TranscriptSummary';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
+import HandTrackingButton from '../button/HandTrackingButton';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -353,6 +354,20 @@ export default function MeetingRoom({
                 {isTracking ? 'Hand detected' : 'No hand detected'}
               </p>
             )}
+          </div>
+
+          <div className="relative flex items-center justify-center">
+            <ControlBar controls={{ chat: true, settings: false }} />
+            <div className="absolute right-20">
+              <HandTrackingButton
+                trackingEnabled={trackingEnabled}
+                overlayEnabled={overlayEnabled}
+                isTracking={isTracking}
+                isCameraEnabled={isCameraEnabled}
+                onToggleTracking={handleToggleTracking}
+                onToggleOverlay={handleToggleOverlay}
+              />
+            </div>
           </div>
         </div>
 
