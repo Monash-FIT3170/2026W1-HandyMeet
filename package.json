@@ -24,6 +24,8 @@
     ]
   },
   "dependencies": {
+    "@livekit/agents": "^1.4.0",
+    "@livekit/agents-plugin-deepgram": "^1.4.0",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
     "@tailwindcss/postcss": "^4.2.4",
