@@ -10,6 +10,10 @@ import {
   raiseHand,
   sendThumbsDown,
   sendThumbsUp,
+  sendHello,
+  sendTired,
+  sendOk,
+  sendThankYou
 } from "./actions";
 import { Gesture } from "../../constants/gestures";
 import { Reaction } from "../../constants/reactions";
@@ -25,6 +29,10 @@ const actionEntries: Array<[Action, ActionHandler]> = [
   [Reaction.ThumbsDown, sendThumbsDown],
   [Reaction.ThumbsUp, sendThumbsUp],
   [Gesture.Unmute, enableMicrophone],
+  [Reaction.Hello, sendHello],
+  [Reaction.Tired, sendTired],
+  [Reaction.Ok, sendOk],
+  [Reaction.ThankYou, sendThankYou]
 ];
 
 const actionMap = new Map<Action, ActionHandler>(actionEntries);

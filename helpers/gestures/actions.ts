@@ -44,3 +44,19 @@ export const sendThumbsDown = async (room: Room): Promise<void> => {
 export const raiseHand = async (room: Room): Promise<void> => {
   await sendReaction(room, Reaction.RaiseHand);
 };
+
+export const sendHello = async (room: Room): Promise<void> => {
+  await sendReaction(room, Reaction.Hello);
+};
+
+export const sendTired = async (room: Room): Promise<void> => {
+  await sendReaction(room, Reaction.Tired);
+};
+
+export const sendOk = async (room: Room): Promise<void> => {
+  await sendReaction(room, Reaction.Ok);
+};
+
+export const sendThankYou = async (room: Room): Promise<void> => {
+  await sendReaction(room, Reaction.ThankYou);
+};
