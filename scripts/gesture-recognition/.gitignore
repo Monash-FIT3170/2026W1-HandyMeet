@@ -1,3 +1,5 @@
+training_data/01_images/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
