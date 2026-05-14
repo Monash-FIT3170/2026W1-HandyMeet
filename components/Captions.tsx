@@ -50,17 +50,20 @@ export default function Captions() {
                 }`}
             >
                 <div className={`bg-black/60 flex flex-col gap-2 text-center ${expandCaptions ? 'h-64 overflow-y-auto' : 'h-auto overflow-hidden'}`}>
-                    {captions.map((caption, index) => (
-                        <div
-                            key={index}
-                            className="animate-in fade-in duration-300"
-                        >
-                            <span>
-                                {caption.participantInfo?.identity ?? "Unknown"}:{" "}
-                                {caption.text}
-                            </span>
-                        </div>
-                    ))}
+                    {captions.map((caption, index) => {
+                        const isLatest = index === captions.length - 1;
+                        return (
+                            <div
+                                key={index}
+                                className={`animate-in fade-in duration-300 ${isLatest ? 'font-bold text-lg' : 'opacity-60 text-lg'}`}
+                            >
+                                <span>
+                                    {caption.participantInfo?.identity ?? "Unknown"}:{" "}
+                                    {caption.text}
+                                </span>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </div>
