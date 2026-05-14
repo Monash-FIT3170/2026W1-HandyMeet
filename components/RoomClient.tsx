@@ -68,8 +68,8 @@ export default function RoomClient({
       >
         <MeetingRoom />
         <div className="absolute bottom-24 left-0 right-0 z-10 flex justify-center pointer-events-none">
-          <div className="bg-black/60 text-white p-4 rounded-lg max-w-2xl pointer-events-auto">
-            <Captions />
+          <div className="text-white p-4 rounded-lg max-w-2xl pointer-events-auto">
+            <Captions/>
           </div>
         </div>
       </LiveKitRoom>
