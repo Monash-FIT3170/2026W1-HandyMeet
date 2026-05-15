@@ -5,6 +5,7 @@ import {
   Chat,
   ConnectionStateToast,
   ControlBar,
+  DisconnectButton,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
@@ -26,6 +27,8 @@ import type {
 import { RoomEvent, Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
+import TranscriptionSettings from '@/components/TranscriptionSettings';
+import type { CaptionSettings } from '@/components/TranscriptionSettings';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -80,9 +83,18 @@ function MeetingTile({
   return <ParticipantTile trackRef={resolvedTrackRef} />;
 }
 
-export default function MeetingRoom() {
+type MeetingRoomProps = {
+  captionSettings: CaptionSettings;
+  onCaptionSettingsChange: (s: CaptionSettings) => void;
+};
+
+export default function MeetingRoom({
+  captionSettings,
+  onCaptionSettingsChange,
+}: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
+  const [captionsOpen, setCaptionsOpen] = useState(false);
   const [trackingEnabled] = useState(false);
   const [overlayEnabled] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -185,9 +197,71 @@ export default function MeetingRoom() {
             </div>
           )}
 
-          <ControlBar controls={{ chat: true, settings: false }} />
+          {/* Control bar row — ControlBar sits inside a flex wrapper alongside custom buttons */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              padding: '0.75rem',
+              borderTop: '1px solid var(--lk-border-color)',
+            }}
+          >
+            <ControlBar
+              controls={{ chat: true, settings: false, leave: false }}
+              style={{ border: 'none', padding: 0, gap: '0.5rem' }}
+            />
+            {/* Captions button — settings panel floats above it */}
+            <div style={{ position: 'relative' }}>
+              {captionsOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: 'calc(100% + 0.5rem)',
+                    right: 0,
+                    zIndex: 9999,
+                  }}
+                >
+                  <TranscriptionSettings
+                    settings={captionSettings}
+                    onChange={onCaptionSettingsChange}
+                    open={captionsOpen}
+                    onClose={() => setCaptionsOpen(false)}
+                  />
+                </div>
+              )}
+              <button
+                className="lk-button"
+                aria-pressed={captionsOpen}
+                onClick={() => setCaptionsOpen((v) => !v)}
+                title="Customise captions"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <path d="M8 10.5h4" />
+                  <path d="M14 10.5h4" />
+                  <path d="M8 14.5h4" />
+                  <path d="M14 14.5h2" />
+                </svg>
+                Captions
+              </button>
+            </div>
+            <DisconnectButton>Leave</DisconnectButton>
+          </div>
         </div>
 
+        {/* Chat panel — shown/hidden by LiveKit widget state */}
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
       </LayoutContextProvider>
 
