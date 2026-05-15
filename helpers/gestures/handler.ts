@@ -1,5 +1,6 @@
 import type { Room } from "livekit-client";
-
+import { Gesture } from "../../constants/gestures";
+import { Reaction } from "../../constants/reactions";
 import {
   ActionHandler,
   disableCamera,
@@ -15,8 +16,6 @@ import {
   sendOk,
   sendThankYou
 } from "./actions";
-import { Gesture } from "../../constants/gestures";
-import { Reaction } from "../../constants/reactions";
 
 type Action = Gesture | Reaction;
 
