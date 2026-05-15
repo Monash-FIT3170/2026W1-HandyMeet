@@ -6,6 +6,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MeetingRoom from '@/components/meeting/MeetingRoom';
 import Captions from '@/components/Captions';
+import {
+  defaultCaptionSettings,
+  type CaptionSettings,
+} from '@/components/TranscriptionSettings';
 
 export default function RoomClient({
   roomName,
@@ -16,6 +20,9 @@ export default function RoomClient({
 }) {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
+  const [captionSettings, setCaptionSettings] = useState<CaptionSettings>(
+    defaultCaptionSettings,
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -66,12 +73,11 @@ export default function RoomClient({
         audio={true}
         onDisconnected={() => router.push('/')}
       >
-        <MeetingRoom />
-        <div className="absolute bottom-24 left-0 right-0 z-10 flex justify-center pointer-events-none">
-          <div className="text-white p-4 rounded-lg max-w-2xl pointer-events-auto">
-            <Captions/>
-          </div>
-        </div>
+        <MeetingRoom
+          captionSettings={captionSettings}
+          onCaptionSettingsChange={setCaptionSettings}
+        />
+        <Captions settings={captionSettings} />
       </LiveKitRoom>
     </main>
   );
