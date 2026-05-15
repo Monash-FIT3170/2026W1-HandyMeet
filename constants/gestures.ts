@@ -4,4 +4,7 @@ export enum Gesture {
   EndCall = "endCall",
   Mute = "mute",
   Unmute = "unmute",
+  Pen = "pen",
+  Help = "help",
+
 }
