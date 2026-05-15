@@ -7,5 +7,5 @@ export enum Reaction {
   Hello = "hello",
   Tired = "tired",
   Ok = "ok",
-  ThankYou = "thankYou"
+  ThankYou = "thankYou",
 }
