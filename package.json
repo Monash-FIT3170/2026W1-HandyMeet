@@ -24,6 +24,7 @@
     ]
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@livekit/agents": "^1.4.0",
     "@livekit/agents-plugin-deepgram": "^1.4.0",
     "@livekit/components-react": "^2.9.20",
