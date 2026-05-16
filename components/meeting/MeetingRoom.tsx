@@ -5,7 +5,6 @@ import {
   Chat,
   ConnectionStateToast,
   ControlBar,
-  DisconnectButton,
   FocusLayout,
   FocusLayoutContainer,
   GridLayout,
@@ -18,6 +17,7 @@ import {
   useMaybeTrackRefContext,
   usePinnedTracks,
   useTracks,
+  useTranscriptions,
 } from '@livekit/components-react';
 import type {
   TrackReference,
@@ -26,9 +26,11 @@ import type {
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
+import TranscriptSummary from '@/components/TranscriptSummary';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -97,6 +99,9 @@ export default function MeetingRoom({
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const [trackingEnabled] = useState(false);
   const [overlayEnabled] = useState(false);
+  const [showTranscriptSummary, setShowTranscriptSummary] = useState(false);
+  const transcriptions = useTranscriptions();
+
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const layoutContext = useCreateLayoutContext();
@@ -125,6 +130,8 @@ export default function MeetingRoom({
     localCanvasRef.current = canvas;
   }, []);
 
+  const router = useRouter();
+
   useEffect(() => {
     const subscribedScreenShare = screenShareTracks.find(
       (track) => track.publication.isSubscribed,
@@ -152,6 +159,19 @@ export default function MeetingRoom({
       autoFocusedScreenShare.current = null;
     }
   }, [layoutContext.pin, screenShareTracks]);
+
+  const transcriptLines = transcriptions.map(
+    (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
+  );
+
+  const handleLeave = () => {
+    setShowTranscriptSummary(true);
+  };
+
+  const handleSummaryClose = () => {
+    setShowTranscriptSummary(false);
+    router.push('/');
+  };
 
   return (
     <div className="lk-video-conference">
@@ -257,7 +277,16 @@ export default function MeetingRoom({
                 Captions
               </button>
             </div>
-            <DisconnectButton>Leave</DisconnectButton>
+            <button className="lk-button" onClick={handleLeave}>
+              Leave
+            </button>
+
+            {showTranscriptSummary && (
+              <TranscriptSummary
+                transcript={transcriptLines}
+                onClose={handleSummaryClose}
+              />
+            )}
           </div>
         </div>
 
