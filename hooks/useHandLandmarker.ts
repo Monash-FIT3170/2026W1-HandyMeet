@@ -3,13 +3,25 @@ import {
   HandLandmarker,
   FilesetResolver,
   DrawingUtils,
+  type NormalizedLandmark,
+  type Landmark,
+  type Category,
 } from '@mediapipe/tasks-vision';
+
+export type LandmarkSnapshot = {
+  landmarks: NormalizedLandmark[][];
+  worldLandmarks: Landmark[][];
+  handedness: Category[][];
+  timestamp: number;
+};
 
 type UseHandLandmarkerOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   trackingEnabled: boolean;
   overlayEnabled: boolean;
+  onLandmarksSnapshot?: (snapshot: LandmarkSnapshot) => void;
+  snapshotIntervalMs?: number;
 };
 
 export function useHandLandmarker({
@@ -17,12 +29,26 @@ export function useHandLandmarker({
   canvasRef,
   trackingEnabled,
   overlayEnabled,
+  onLandmarksSnapshot,
+  snapshotIntervalMs = 200,
 }: UseHandLandmarkerOptions) {
   const landmarkerRef = useRef<HandLandmarker | null>(null);
   // Holds the requestAnimationFrame ID so we can cancel it on cleanup
   const animationFrameRef = useRef<number | null>(null);
   // Tracks the last video timestamp to avoid re-processing the same frame
   const lastVideoTimeRef = useRef<number>(-1);
+  const lastSnapshotTimeRef = useRef<number>(0);
+  // Refs keep callback and interval stable inside the animation frame loop
+  const onLandmarksSnapshotRef = useRef(onLandmarksSnapshot);
+  const snapshotIntervalMsRef = useRef(snapshotIntervalMs);
+
+  useEffect(() => {
+    onLandmarksSnapshotRef.current = onLandmarksSnapshot;
+  }, [onLandmarksSnapshot]);
+
+  useEffect(() => {
+    snapshotIntervalMsRef.current = snapshotIntervalMs;
+  }, [snapshotIntervalMs]);
 
   const [isTracking, setIsTracking] = useState(false);
 
@@ -128,6 +154,22 @@ export function useHandLandmarker({
         setIsTracking(results.landmarks.length > 0);
 
         ctx.restore();
+      }
+
+      // Emit a throttled snapshot when hands are visible
+      const now = performance.now();
+      if (
+        results.landmarks.length > 0 &&
+        onLandmarksSnapshotRef.current &&
+        now - lastSnapshotTimeRef.current >= snapshotIntervalMsRef.current
+      ) {
+        lastSnapshotTimeRef.current = now;
+        onLandmarksSnapshotRef.current({
+          landmarks: results.landmarks,
+          worldLandmarks: results.worldLandmarks,
+          handedness: results.handedness,
+          timestamp: now,
+        });
       }
 
       animationFrameRef.current = requestAnimationFrame(detect);
