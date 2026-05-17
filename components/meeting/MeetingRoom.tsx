@@ -28,6 +28,7 @@ import { RoomEvent, Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
+import HandTrackingButton from '../button/HandTrackingButton';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -216,39 +217,18 @@ export default function MeetingRoom() {
             </div>
           )}
 
-          <ControlBar controls={{ chat: true, settings: false }} />
-
-          <div className="fixed bottom-24 right-4 flex flex-col gap-2 z-50">
-            <button
-              onClick={handleToggleTracking}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                trackingEnabled
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-              }`}
-            >
-              {trackingEnabled ? 'Tracking On' : 'Tracking Off'}
-            </button>
-
-            <button
-              onClick={handleToggleOverlay}
-              disabled={!trackingEnabled}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                overlayEnabled
-                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-              }`}
-            >
-              {overlayEnabled ? 'Overlay On' : 'Overlay Off'}
-            </button>
-
-            {trackingEnabled && (
-              <p
-                className={`text-xs text-center ${isTracking ? 'text-emerald-400' : 'text-neutral-500'}`}
-              >
-                {isTracking ? 'Hand detected' : 'No hand detected'}
-              </p>
-            )}
+          <div className="relative flex items-center justify-center">
+            <ControlBar controls={{ chat: true, settings: false }} />
+            <div className="absolute right-20">
+              <HandTrackingButton
+                trackingEnabled={trackingEnabled}
+                overlayEnabled={overlayEnabled}
+                isTracking={isTracking}
+                isCameraEnabled={isCameraEnabled}
+                onToggleTracking={handleToggleTracking}
+                onToggleOverlay={handleToggleOverlay}
+              />
+            </div>
           </div>
         </div>
 
