@@ -1,6 +1,6 @@
-import type { Room } from "livekit-client";
-import { Gesture } from "../../constants/gestures";
-import { Reaction } from "../../constants/reactions";
+import type { Room } from 'livekit-client';
+import { Gesture } from '../../constants/gestures';
+import { Reaction } from '../../constants/reactions';
 import {
   ActionHandler,
   disableCamera,
@@ -14,8 +14,8 @@ import {
   sendHello,
   sendTired,
   sendOk,
-  sendThankYou
-} from "./actions";
+  sendThankYou,
+} from './actions';
 
 type Action = Gesture | Reaction;
 
@@ -31,22 +31,25 @@ const actionEntries: Array<[Action, ActionHandler]> = [
   [Reaction.Hello, sendHello],
   [Reaction.Tired, sendTired],
   [Reaction.Ok, sendOk],
-  [Reaction.ThankYou, sendThankYou]
+  [Reaction.ThankYou, sendThankYou],
 ];
 
 const actionMap = new Map<Action, ActionHandler>(actionEntries);
 
 /**
  * Processes a gesture or reaction by looking up and executing its associated handler.
- * 
+ *
  * @param room - The LiveKit room where the action should occur.
  * @param action - The specific Gesture or Reaction to trigger.
  * @returns `true` if the action was recognized and executed, `false` otherwise.
- * 
+ *
  * @example
  * await handleAction(room, Gesture.Mute);
  */
-export const handleAction = async (room: Room, action: Action): Promise<boolean> => {
+export const handleAction = async (
+  room: Room,
+  action: Action,
+): Promise<boolean> => {
   const handler = actionMap.get(action);
 
   if (!handler) {

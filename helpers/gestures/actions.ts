@@ -1,5 +1,5 @@
-import type { Room } from "livekit-client";
-import { Reaction, ReactionTopic } from "../../constants/reactions";
+import type { Room } from 'livekit-client';
+import { Reaction, ReactionTopic } from '../../constants/reactions';
 
 /**
  * A standard handler for room-related actions.
@@ -13,19 +13,27 @@ const sendReaction = async (room: Room, reaction: Reaction): Promise<void> => {
   await room.localParticipant.publishData(payload, { topic: ReactionTopic });
 };
 
-export const enableMicrophone: ActionHandler = async (room: Room): Promise<void> => {
+export const enableMicrophone: ActionHandler = async (
+  room: Room,
+): Promise<void> => {
   await room.localParticipant.setMicrophoneEnabled(true);
 };
 
-export const disableMicrophone: ActionHandler = async (room: Room): Promise<void> => {
+export const disableMicrophone: ActionHandler = async (
+  room: Room,
+): Promise<void> => {
   await room.localParticipant.setMicrophoneEnabled(false);
 };
 
-export const enableCamera: ActionHandler = async (room: Room): Promise<void> => {
+export const enableCamera: ActionHandler = async (
+  room: Room,
+): Promise<void> => {
   await room.localParticipant.setCameraEnabled(true);
 };
 
-export const disableCamera: ActionHandler = async (room: Room): Promise<void> => {
+export const disableCamera: ActionHandler = async (
+  room: Room,
+): Promise<void> => {
   await room.localParticipant.setCameraEnabled(false);
 };
 
@@ -35,19 +43,19 @@ export const disconnectFromRoom: ActionHandler = (room: Room): void => {
 
 export const togglePen: ActionHandler = async (room: Room): Promise<void> => {
   // Placeholder for pen toggle functionality
-  console.log("Pen toggle action triggered");
+  console.log('Pen toggle action triggered');
 };
 
 export const requestHelp: ActionHandler = async (room: Room): Promise<void> => {
   // Placeholder for help request functionality
-  console.log("Help request action triggered");
+  console.log('Help request action triggered');
 };
 
 export const sendThumbsUp = async (room: Room): Promise<void> => {
   await sendReaction(room, Reaction.ThumbsUp);
 };
 
-export const sendThumbsDown = async (room: Room): Promise<void> => {  
+export const sendThumbsDown = async (room: Room): Promise<void> => {
   await sendReaction(room, Reaction.ThumbsDown);
 };
 
