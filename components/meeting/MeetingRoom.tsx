@@ -115,10 +115,13 @@ export default function MeetingRoom({
       updateOnlyOn: [RoomEvent.ActiveSpeakersChanged],
       onlySubscribed: false,
     },
-  );
+  ).filter(
+    (track) => !track.participant.identity.toLowerCase().startsWith('agent-'),
+  ); // To remove the agent from the UI view
   const screenShareTracks = tracks
     .filter(isTrackReference)
     .filter((track) => track.publication.source === Track.Source.ScreenShare);
+
   const focusedTrack = usePinnedTracks(layoutContext)[0];
   const carouselTracks = tracks.filter(
     (track) => !isSameTrack(track, focusedTrack),
