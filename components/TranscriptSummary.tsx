@@ -18,8 +18,38 @@ export default function TranscriptSummary({
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const cleanTranscriptLines = (lines: string[]) => {
+    const cleaned: string[] = [];
+
+    for (const line of lines) {
+      const current = line.trim();
+
+      if (!current) continue;
+
+      const previous = cleaned[cleaned.length - 1];
+
+      if (!previous) {
+        cleaned.push(current);
+        continue;
+      }
+
+      // Remove exact duplicate lines
+      if (current === previous) continue;
+
+      // Remove partial duplicate lines
+      if (current.startsWith(previous)) {
+        cleaned[cleaned.length - 1] = current;
+        continue;
+      }
+
+      cleaned.push(current);
+    }
+
+    return cleaned;
+  };
+
   const fullTranscript = useMemo(() => {
-    return transcript.join('\n');
+    return cleanTranscriptLines(transcript).join('\n');
   }, [transcript]);
 
   const generateSummary = async () => {
