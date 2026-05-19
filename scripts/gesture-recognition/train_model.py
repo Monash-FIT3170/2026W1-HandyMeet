@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import numpy.typing as npt
 
 try:
     import tensorflow as tf
@@ -30,7 +31,9 @@ EPOCHS = 50
 BATCH_SIZE = 32
 
 
-def load_training_data(csv_path: Path) -> tuple[np.ndarray, np.ndarray, list[str]]:
+def load_training_data(
+    csv_path: Path,
+) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.int32], list[str]]:
     if not csv_path.exists():
         raise FileNotFoundError(f"Training CSV not found: {csv_path}")
 
