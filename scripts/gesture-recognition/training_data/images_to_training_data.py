@@ -5,10 +5,17 @@ import csv
 import math
 import sys
 from pathlib import Path
+from typing import TypeAlias
 
 try:
     import cv2
     import mediapipe as mp
+    from mediapipe.tasks.python.components.containers.category import Category
+    from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
+    from mediapipe.tasks.python.vision.hand_landmarker import (
+        HandLandmarker,
+        HandLandmarkerResult,
+    )
 except ModuleNotFoundError as exc:
     print(
         "Missing dependency. Ensure all dependencies are installed:\n"
@@ -23,6 +30,9 @@ IMAGES_DIR = ROOT_DIR / "01_images"
 OUTPUT_DIR = ROOT_DIR / "02_training_data"
 OUTPUT_CSV = OUTPUT_DIR / "hand_landmarks.csv"
 MODEL_PATH = ROOT_DIR / "hand_landmarker.task"
+
+HandLandmarks: TypeAlias = list[NormalizedLandmark]
+HandAssignments: TypeAlias = dict[str, HandLandmarks]
 
 
 def get_gesture_name(image_path: Path) -> str:
@@ -54,13 +64,19 @@ def build_header() -> list[str]:
     return header
 
 
-def get_scale(landmarks: list[object]) -> float:
+def get_coordinate(value: float | None, axis_name: str) -> float:
+    if value is None:
+        raise ValueError(f"Missing landmark {axis_name} coordinate")
+    return value
+
+
+def get_scale(landmarks: HandLandmarks) -> float:
     wrist = landmarks[0]
     middle_finger_base = landmarks[9]
 
-    dx = middle_finger_base.x - wrist.x
-    dy = middle_finger_base.y - wrist.y
-    dz = middle_finger_base.z - wrist.z
+    dx = get_coordinate(middle_finger_base.x, "x") - get_coordinate(wrist.x, "x")
+    dy = get_coordinate(middle_finger_base.y, "y") - get_coordinate(wrist.y, "y")
+    dz = get_coordinate(middle_finger_base.z, "z") - get_coordinate(wrist.z, "z")
     scale = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
 
     if scale == 0:
@@ -73,7 +89,7 @@ def empty_hand_features() -> list[float]:
     return [0.0] * (21 * 3)
 
 
-def get_primary_handedness_label(classifications: list[object]) -> str | None:
+def get_primary_handedness_label(classifications: list[Category]) -> str | None:
     if not classifications:
         return None
 
@@ -91,15 +107,15 @@ def get_primary_handedness_label(classifications: list[object]) -> str | None:
     return None
 
 
-def assign_hands(results: object) -> dict[str, list[object]]:
-    assigned: dict[str, tuple[float, list[object]]] = {}
-    unlabeled: list[list[object]] = []
+def assign_hands(results: HandLandmarkerResult) -> HandAssignments:
+    assigned: dict[str, tuple[float, HandLandmarks]] = {}
+    unlabeled: list[HandLandmarks] = []
 
     handedness_results = list(getattr(results, "handedness", []))
     for index, landmarks in enumerate(results.hand_landmarks):
         classifications = handedness_results[index] if index < len(handedness_results) else []
         label = get_primary_handedness_label(classifications)
-        score = float(classifications[0].score) if classifications else 0.0
+        score = float(classifications[0].score or 0.0) if classifications else 0.0
 
         if label is None:
             unlabeled.append(landmarks)
@@ -122,23 +138,26 @@ def assign_hands(results: object) -> dict[str, list[object]]:
 
 
 def encode_hand_features(
-    landmarks: list[object],
-    anchor_wrist: object,
+    landmarks: HandLandmarks,
+    anchor_wrist: NormalizedLandmark,
     scale: float,
 ) -> list[float]:
     features: list[float] = []
     for landmark in landmarks:
         features.extend(
             [
-                (landmark.x - anchor_wrist.x) / scale,
-                (landmark.y - anchor_wrist.y) / scale,
-                (landmark.z - anchor_wrist.z) / scale,
+                (get_coordinate(landmark.x, "x") - get_coordinate(anchor_wrist.x, "x"))
+                / scale,
+                (get_coordinate(landmark.y, "y") - get_coordinate(anchor_wrist.y, "y"))
+                / scale,
+                (get_coordinate(landmark.z, "z") - get_coordinate(anchor_wrist.z, "z"))
+                / scale,
             ]
         )
     return features
 
 
-def extract_row(image_path: Path, hands: object) -> list[float] | None:
+def extract_row(image_path: Path, hands: HandLandmarker) -> list[str | float] | None:
     image = cv2.imread(str(image_path))
     if image is None:
         print(f"Skipping unreadable image: {image_path.name}", file=sys.stderr)
@@ -168,7 +187,7 @@ def extract_row(image_path: Path, hands: object) -> list[float] | None:
 
     gesture_name = get_gesture_name(image_path)
 
-    row: list[float | str] = [gesture_name]
+    row: list[str | float] = [gesture_name]
     row.extend(
         encode_hand_features(left_landmarks, anchor_wrist, scale)
         if left_landmarks is not None
