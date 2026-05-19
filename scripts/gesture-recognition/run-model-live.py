@@ -6,11 +6,19 @@ import math
 import sys
 import time
 from pathlib import Path
+from typing import TypedDict, TypeAlias
 
 import cv2
 import mediapipe as mp
 import numpy as np
+import numpy.typing as npt
 import tensorflow as tf
+from mediapipe.tasks.python.components.containers.category import Category
+from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
+from mediapipe.tasks.python.vision.hand_landmarker import (
+    HandLandmarker,
+    HandLandmarkerResult,
+)
 
 
 ROOT_DIR = Path(__file__).resolve().parent
@@ -21,14 +29,30 @@ SINGLE_HAND_CONFIDENCE_THRESHOLD = 0.9
 TWO_HAND_PREFERENCE_THRESHOLD = 0.8
 HAND_FEATURE_COUNT = 21 * 3
 
+HandLandmarks: TypeAlias = list[NormalizedLandmark]
+HandAssignments: TypeAlias = dict[str, HandLandmarks]
 
-def get_scale(landmarks: list[object]) -> float:
+
+class PredictionCandidate(TypedDict):
+    candidate_name: str
+    gesture_name: str
+    best_probability: float
+    probabilities: npt.NDArray[np.float32]
+
+
+def get_coordinate(value: float | None, axis_name: str) -> float:
+    if value is None:
+        raise ValueError(f"Missing landmark {axis_name} coordinate")
+    return value
+
+
+def get_scale(landmarks: HandLandmarks) -> float:
     wrist = landmarks[0]
     middle_finger_base = landmarks[9]
 
-    dx = middle_finger_base.x - wrist.x
-    dy = middle_finger_base.y - wrist.y
-    dz = middle_finger_base.z - wrist.z
+    dx = get_coordinate(middle_finger_base.x, "x") - get_coordinate(wrist.x, "x")
+    dy = get_coordinate(middle_finger_base.y, "y") - get_coordinate(wrist.y, "y")
+    dz = get_coordinate(middle_finger_base.z, "z") - get_coordinate(wrist.z, "z")
     scale = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
 
     if scale == 0:
@@ -41,7 +65,7 @@ def empty_hand_features() -> list[float]:
     return [0.0] * HAND_FEATURE_COUNT
 
 
-def get_primary_handedness_label(classifications: list[object]) -> str | None:
+def get_primary_handedness_label(classifications: list[Category]) -> str | None:
     if not classifications:
         return None
 
@@ -59,15 +83,15 @@ def get_primary_handedness_label(classifications: list[object]) -> str | None:
     return None
 
 
-def assign_hands(results: object) -> dict[str, list[object]]:
-    assigned: dict[str, tuple[float, list[object]]] = {}
-    unlabeled: list[list[object]] = []
+def assign_hands(results: HandLandmarkerResult) -> HandAssignments:
+    assigned: dict[str, tuple[float, HandLandmarks]] = {}
+    unlabeled: list[HandLandmarks] = []
 
     handedness_results = list(getattr(results, "handedness", []))
     for index, landmarks in enumerate(results.hand_landmarks):
         classifications = handedness_results[index] if index < len(handedness_results) else []
         label = get_primary_handedness_label(classifications)
-        score = float(classifications[0].score) if classifications else 0.0
+        score = float(classifications[0].score or 0.0) if classifications else 0.0
 
         if label is None:
             unlabeled.append(landmarks)
@@ -89,26 +113,29 @@ def assign_hands(results: object) -> dict[str, list[object]]:
 
 
 def encode_hand_features(
-    landmarks: list[object],
-    anchor_wrist: object,
+    landmarks: HandLandmarks,
+    anchor_wrist: NormalizedLandmark,
     scale: float,
 ) -> list[float]:
     features: list[float] = []
     for landmark in landmarks:
         features.extend(
             [
-                (landmark.x - anchor_wrist.x) / scale,
-                (landmark.y - anchor_wrist.y) / scale,
-                (landmark.z - anchor_wrist.z) / scale,
+                (get_coordinate(landmark.x, "x") - get_coordinate(anchor_wrist.x, "x"))
+                / scale,
+                (get_coordinate(landmark.y, "y") - get_coordinate(anchor_wrist.y, "y"))
+                / scale,
+                (get_coordinate(landmark.z, "z") - get_coordinate(anchor_wrist.z, "z"))
+                / scale,
             ]
         )
     return features
 
 
 def build_feature_vector(
-    left_landmarks: list[object] | None,
-    right_landmarks: list[object] | None,
-) -> np.ndarray:
+    left_landmarks: HandLandmarks | None,
+    right_landmarks: HandLandmarks | None,
+) -> npt.NDArray[np.float32]:
     if left_landmarks is not None:
         anchor_wrist = left_landmarks[0]
         scale = get_scale(left_landmarks)
@@ -136,12 +163,12 @@ def build_feature_vector(
 def predict_candidate(
     model: tf.keras.Model,
     gesture_names: list[str],
-    left_landmarks: list[object] | None,
-    right_landmarks: list[object] | None,
+    left_landmarks: HandLandmarks | None,
+    right_landmarks: HandLandmarks | None,
     candidate_name: str,
-) -> dict[str, object]:
+) -> PredictionCandidate:
     features = build_feature_vector(left_landmarks, right_landmarks)
-    probabilities = model.predict(features, verbose=0)[0]
+    probabilities = np.asarray(model.predict(features, verbose=0)[0], dtype=np.float32)
     best_index = int(np.argmax(probabilities))
     best_probability = float(probabilities[best_index])
 
@@ -164,7 +191,9 @@ def load_gesture_names(labels_path: Path) -> list[str]:
     return [str(name) for name in class_names]
 
 
-def format_probabilities(probabilities: np.ndarray, gesture_names: list[str]) -> str:
+def format_probabilities(
+    probabilities: npt.NDArray[np.float32], gesture_names: list[str]
+) -> str:
     return ", ".join(
         f"{name}: {probability * 100:.1f}%"
         for name, probability in zip(gesture_names, probabilities)
