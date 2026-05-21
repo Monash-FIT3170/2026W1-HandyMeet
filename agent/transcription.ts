@@ -66,15 +66,3 @@ cli.runApp(
     agent: fileURLToPath(import.meta.url),
   }),
 );
-
-// cli.runApp(new ServerOptions({
-//   agent: fileURLToPath(import.meta.url),
-//   permissions: {
-//     canPublish: true,
-//     canPublishData: true,
-//     canPublishSources: [],
-//     canSubscribe: true,
-//     canUpdateMetadata: true,
-//     hidden: true, // removes the agent from the participant list in the meeting room UI
-//   },
-// }));
