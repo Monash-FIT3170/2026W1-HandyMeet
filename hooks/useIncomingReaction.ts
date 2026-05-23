@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Room, RemoteParticipant } from 'livekit-client';
-import { RoomEvent, DataPacket_Kind } from 'livekit-client';
+import type { Room, Participant, DataPacket_Kind } from 'livekit-client';
+import { RoomEvent } from 'livekit-client';
 import { ReactionTopic } from '../constants/reactions';
 
 /**
@@ -10,8 +10,9 @@ import { ReactionTopic } from '../constants/reactions';
  * @returns An object containing the current `reaction` string.
  */
 
-export const useGestureActions = (room: Room | undefined) => {
+export const useIncomingReaction = (room: Room | undefined) => {
   const [reaction, setReaction] = useState<string>('');
+  const [participant, setParticipant] = useState<Participant | undefined>();
 
   useEffect(() => {
     if (!room) return;
@@ -21,7 +22,7 @@ export const useGestureActions = (room: Room | undefined) => {
      */
     const handleData = (
       payload: Uint8Array,
-      _participant?: RemoteParticipant,
+      sender?: Participant,
       _kind?: DataPacket_Kind,
       topic?: string,
     ) => {
@@ -32,6 +33,7 @@ export const useGestureActions = (room: Room | undefined) => {
         const data = JSON.parse(decoder.decode(payload));
 
         setReaction(data.reaction);
+        setParticipant(sender);
       } catch (error) {
         console.error('Failed to parse incoming reaction data:', error);
       }
@@ -45,5 +47,5 @@ export const useGestureActions = (room: Room | undefined) => {
     };
   }, [room]);
 
-  return { reaction };
+  return { reaction, participant };
 };
