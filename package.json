@@ -29,6 +29,7 @@
     "@livekit/agents-plugin-deepgram": "^1.4.0",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
+    "@mediapipe/tasks-vision": "^0.10.35",
     "@tailwindcss/postcss": "^4.2.4",
     "@tensorflow/tfjs": "^4.22.0",
     "livekit-client": "^2.18.8",

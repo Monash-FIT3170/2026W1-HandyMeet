@@ -18,6 +18,7 @@ import {
   usePinnedTracks,
   useTracks,
   useTranscriptions,
+  useLocalParticipant,
 } from '@livekit/components-react';
 import type {
   TrackReference,
@@ -31,6 +32,7 @@ import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import TranscriptSummary from '@/components/TranscriptSummary';
+import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -97,11 +99,11 @@ export default function MeetingRoom({
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
   const [captionsOpen, setCaptionsOpen] = useState(false);
-  const [trackingEnabled] = useState(false);
-  const [overlayEnabled] = useState(false);
+  const [trackingEnabled, setTrackingEnabled] = useState(false);
+  const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [showTranscriptSummary, setShowTranscriptSummary] = useState(false);
   const transcriptions = useTranscriptions();
-
+  const { isCameraEnabled } = useLocalParticipant();
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const layoutContext = useCreateLayoutContext();
@@ -134,6 +136,33 @@ export default function MeetingRoom({
   }, []);
 
   const router = useRouter();
+  const { isTracking } = useHandLandmarker({
+    videoRef: localVideoRef,
+    canvasRef: localCanvasRef,
+    trackingEnabled,
+    overlayEnabled,
+  });
+
+  useEffect(() => {
+    if (!isCameraEnabled) {
+      setTimeout(() => {
+        setTrackingEnabled(false);
+        setOverlayEnabled(false);
+      }, 0);
+    }
+  }, [isCameraEnabled]);
+
+  function handleToggleTracking() {
+    setTrackingEnabled((prev) => {
+      if (prev) setOverlayEnabled(false);
+      return !prev;
+    });
+  }
+
+  function handleToggleOverlay() {
+    if (!trackingEnabled) return;
+    setOverlayEnabled((prev) => !prev);
+  }
 
   useEffect(() => {
     const subscribedScreenShare = screenShareTracks.find(
@@ -289,6 +318,40 @@ export default function MeetingRoom({
                 transcript={transcriptLines}
                 onClose={handleSummaryClose}
               />
+            )}
+          </div>
+
+          {/* Hand tracking controls */}
+          <div className="fixed bottom-24 right-4 flex flex-col gap-2 z-50">
+            <button
+              onClick={handleToggleTracking}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                trackingEnabled
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              {trackingEnabled ? 'Tracking On' : 'Tracking Off'}
+            </button>
+
+            <button
+              onClick={handleToggleOverlay}
+              disabled={!trackingEnabled}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                overlayEnabled
+                  ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                  : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+              }`}
+            >
+              {overlayEnabled ? 'Overlay On' : 'Overlay Off'}
+            </button>
+
+            {trackingEnabled && (
+              <p
+                className={`text-xs text-center ${isTracking ? 'text-emerald-400' : 'text-neutral-500'}`}
+              >
+                {isTracking ? 'Hand detected' : 'No hand detected'}
+              </p>
             )}
           </div>
         </div>
