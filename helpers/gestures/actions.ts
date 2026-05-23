@@ -41,11 +41,13 @@ export const disconnectFromRoom: ActionHandler = (room: Room): void => {
   room.disconnect();
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const togglePen: ActionHandler = async (room: Room): Promise<void> => {
   // Placeholder for pen toggle functionality
   console.log('Pen toggle action triggered');
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const requestHelp: ActionHandler = async (room: Room): Promise<void> => {
   // Placeholder for help request functionality
   console.log('Help request action triggered');
