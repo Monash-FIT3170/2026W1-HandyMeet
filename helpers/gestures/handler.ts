@@ -17,7 +17,7 @@ import {
   sendThankYou,
 } from './actions';
 
-type Action = Gesture | Reaction;
+export type Action = Gesture | Reaction;
 
 const actionEntries: Array<[Action, ActionHandler]> = [
   [Gesture.CameraOff, disableCamera],
