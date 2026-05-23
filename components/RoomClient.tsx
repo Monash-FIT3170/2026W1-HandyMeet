@@ -10,6 +10,7 @@ import {
   defaultCaptionSettings,
   type CaptionSettings,
 } from '@/components/TranscriptionSettings';
+import GestureReactionsBanner from './GestureReactionsBanner';
 
 export default function RoomClient({
   roomName,
@@ -73,6 +74,8 @@ export default function RoomClient({
         audio={true}
         onDisconnected={() => router.push('/')}
       >
+        <GestureReactionsBanner />
+
         <MeetingRoom
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
