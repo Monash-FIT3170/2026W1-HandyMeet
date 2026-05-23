@@ -142,6 +142,16 @@ export default function MeetingRoom({
     canvasRef: localCanvasRef,
     trackingEnabled,
     overlayEnabled,
+    onLandmarksSnapshot: async (snapshot) => {
+      await fetch('/api/gesture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          worldLandmarks: snapshot.worldLandmarks,
+          handedness: snapshot.handedness,
+        }),
+      });
+    },
   });
 
   useEffect(() => {
