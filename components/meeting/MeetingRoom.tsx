@@ -147,8 +147,7 @@ export default function MeetingRoom({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          worldLandmarks: snapshot.worldLandmarks,
-          handedness: snapshot.handedness,
+          featureVectors: snapshot.featureVectors,
         }),
       });
     },
