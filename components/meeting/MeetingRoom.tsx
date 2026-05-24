@@ -16,6 +16,7 @@ import {
   useCreateLayoutContext,
   useMaybeTrackRefContext,
   usePinnedTracks,
+  useRoomContext,
   useTracks,
   useTranscriptions,
   useLocalParticipant,
@@ -32,6 +33,7 @@ import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import TranscriptSummary from '@/components/TranscriptSummary';
+import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import HandTrackingButton from '../button/HandTrackingButton';
 
@@ -105,8 +107,10 @@ export default function MeetingRoom({
   const [showTranscriptSummary, setShowTranscriptSummary] = useState(false);
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
+  const room = useRoomContext();
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isPredictingGestureRef = useRef(false);
   const layoutContext = useCreateLayoutContext();
   const autoFocusedScreenShare = useRef<TrackReference | null>(null);
   const tracks = useTracks(
@@ -137,19 +141,29 @@ export default function MeetingRoom({
   }, []);
 
   const router = useRouter();
+  const handleShowTranscriptSummary = useCallback(() => {
+    setShowTranscriptSummary(true);
+  }, []);
   const { isTracking } = useHandLandmarker({
     videoRef: localVideoRef,
     canvasRef: localCanvasRef,
     trackingEnabled,
     overlayEnabled,
     onLandmarksSnapshot: async (snapshot) => {
-      await fetch('/api/gesture', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          featureVectors: snapshot.featureVectors,
-        }),
-      });
+      if (isPredictingGestureRef.current) {
+        return;
+      }
+
+      isPredictingGestureRef.current = true;
+      try {
+        await predictGestureAction(
+          room,
+          snapshot.featureVectors,
+          handleShowTranscriptSummary,
+        );
+      } finally {
+        isPredictingGestureRef.current = false;
+      }
     },
   });
 
@@ -206,14 +220,14 @@ export default function MeetingRoom({
     (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
   );
 
-  const handleLeave = () => {
+  const handleLeave = useCallback(() => {
     setShowTranscriptSummary(true);
-  };
+  }, []);
 
-  const handleSummaryClose = () => {
+  const handleSummaryClose = useCallback(() => {
     setShowTranscriptSummary(false);
     router.push('/');
-  };
+  }, [router]);
 
   return (
     <div className="lk-video-conference">

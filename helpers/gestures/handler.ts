@@ -5,7 +5,6 @@ import {
   ActionHandler,
   disableCamera,
   disableMicrophone,
-  disconnectFromRoom,
   enableCamera,
   enableMicrophone,
   raiseHand,
@@ -22,7 +21,6 @@ export type Action = Gesture | Reaction;
 const actionEntries: Array<[Action, ActionHandler]> = [
   [Gesture.CameraOff, disableCamera],
   [Gesture.CameraOn, enableCamera],
-  [Gesture.EndCall, disconnectFromRoom],
   [Gesture.Mute, disableMicrophone],
   [Reaction.RaiseHand, raiseHand],
   [Reaction.ThumbsDown, sendThumbsDown],
