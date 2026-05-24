@@ -1,8 +1,16 @@
 import * as tf from '@tensorflow/tfjs';
 import type { Room } from 'livekit-client';
-import { Gesture } from '@/constants/gestures';
+import {
+  Gesture,
+  MULTI_HAND_CONFIDENCE_THRESHOLD,
+  SINGLE_HAND_CONFIDENCE_THRESHOLD,
+} from '@/constants/gestures';
 import { Reaction } from '@/constants/reactions';
 import gestureLabels from '@/scripts/gesture-recognition/model_labels.json';
+import {
+  HAND_FEATURE_VECTOR_LENGTH,
+  type HandFeatureVectors,
+} from './handLandmarkFeatures';
 import type { Action } from './handler';
 import { processGesture } from '../filtering/gesture-filter';
 
@@ -12,6 +20,10 @@ export type GesturePrediction = {
   label: string;
   score: number;
   index: number;
+};
+type GesturePredictionCandidate = {
+  candidateName: 'left-only' | 'right-only' | 'both-hands';
+  prediction: GesturePrediction;
 };
 
 let gestureModelPromise: Promise<tf.LayersModel> | null = null;
@@ -27,6 +39,17 @@ const loadGestureModel = (): Promise<tf.LayersModel> => {
 };
 
 const getGestureLabels = (): readonly string[] => gestureLabels;
+
+const getExpectedInputSize = (model: tf.LayersModel): number => {
+  const inputShape = model.inputs[0]?.shape;
+  const size = inputShape?.[1];
+
+  if (typeof size !== 'number' || !Number.isFinite(size)) {
+    throw new Error('Gesture model input shape is invalid');
+  }
+
+  return size;
+};
 
 const mapGestureScoresToLabels = (
   scores: ArrayLike<number>,
@@ -74,6 +97,20 @@ const predictGesture = async (
   input: GestureModelInput,
 ): Promise<GesturePrediction> => {
   const model = await loadGestureModel();
+  const expectedInputSize = getExpectedInputSize(model);
+
+  if (expectedInputSize !== HAND_FEATURE_VECTOR_LENGTH) {
+    throw new Error(
+      `Gesture feature width does not match model input: ${HAND_FEATURE_VECTOR_LENGTH} features vs ${expectedInputSize} expected by model`,
+    );
+  }
+
+  if (input.length !== expectedInputSize) {
+    throw new Error(
+      `Gesture input width is invalid: ${input.length} features vs ${expectedInputSize} expected by model`,
+    );
+  }
+
   const inputTensor = tf.tensor2d([Array.from(input)], [1, input.length]);
   const prediction = model.predict(inputTensor);
 
@@ -91,10 +128,58 @@ const predictGesture = async (
 
 export const predictGestureAction = async (
   room: Room,
-  input: GestureModelInput,
+  featureVectors: HandFeatureVectors,
+  disconnect?: () => void,
 ): Promise<void> => {
-  const prediction = await predictGesture(input);
-  const action = mapPredictedGestureToAction(prediction);
+  const candidates: GesturePredictionCandidate[] = [];
 
-  if (action) await processGesture(room, action);
+  if (featureVectors.left) {
+    candidates.push({
+      candidateName: 'left-only',
+      prediction: await predictGesture(Float32Array.from(featureVectors.left)),
+    });
+  }
+
+  if (featureVectors.right) {
+    candidates.push({
+      candidateName: 'right-only',
+      prediction: await predictGesture(Float32Array.from(featureVectors.right)),
+    });
+  }
+
+  if (featureVectors.both) {
+    candidates.push({
+      candidateName: 'both-hands',
+      prediction: await predictGesture(Float32Array.from(featureVectors.both)),
+    });
+  }
+
+  if (candidates.length === 0) {
+    await processGesture(room, null, disconnect);
+    return;
+  }
+
+  const twoHandCandidate = candidates.find(
+    (candidate) => candidate.candidateName === 'both-hands',
+  );
+
+  const chosenCandidate =
+    twoHandCandidate &&
+    twoHandCandidate.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD
+      ? twoHandCandidate
+      : candidates.reduce((best, current) =>
+          current.prediction.score > best.prediction.score ? current : best,
+        );
+
+  const acceptanceThreshold =
+    chosenCandidate.candidateName === 'both-hands'
+      ? MULTI_HAND_CONFIDENCE_THRESHOLD
+      : SINGLE_HAND_CONFIDENCE_THRESHOLD;
+
+  const action =
+    chosenCandidate.prediction.score >= acceptanceThreshold
+      ? mapPredictedGestureToAction(chosenCandidate.prediction)
+      : null;
+
+  await processGesture(room, action, disconnect);
 };

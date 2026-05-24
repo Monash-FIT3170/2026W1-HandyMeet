@@ -13,18 +13,20 @@
         "dtype": {
           "module": "keras",
           "class_name": "DTypePolicy",
-          "config": { "name": "float32" },
+          "config": {
+            "name": "float32"
+          },
           "registered_name": null
         },
         "layers": [
           {
             "class_name": "InputLayer",
             "config": {
-              "batch_shape": [null, 126],
               "dtype": "float32",
               "sparse": false,
               "ragged": false,
-              "name": "input_layer"
+              "name": "input_layer",
+              "batch_input_shape": [null, 126]
             }
           },
           {
@@ -35,7 +37,9 @@
               "dtype": {
                 "module": "keras",
                 "class_name": "DTypePolicy",
-                "config": { "name": "float32" },
+                "config": {
+                  "name": "float32"
+                },
                 "registered_name": null
               },
               "units": 128,
@@ -44,7 +48,9 @@
               "kernel_initializer": {
                 "module": "keras.initializers",
                 "class_name": "GlorotUniform",
-                "config": { "seed": null },
+                "config": {
+                  "seed": null
+                },
                 "registered_name": null
               },
               "bias_initializer": {
@@ -67,7 +73,9 @@
               "dtype": {
                 "module": "keras",
                 "class_name": "DTypePolicy",
-                "config": { "name": "float32" },
+                "config": {
+                  "name": "float32"
+                },
                 "registered_name": null
               },
               "rate": 0.2,
@@ -83,7 +91,9 @@
               "dtype": {
                 "module": "keras",
                 "class_name": "DTypePolicy",
-                "config": { "name": "float32" },
+                "config": {
+                  "name": "float32"
+                },
                 "registered_name": null
               },
               "units": 64,
@@ -92,7 +102,9 @@
               "kernel_initializer": {
                 "module": "keras.initializers",
                 "class_name": "GlorotUniform",
-                "config": { "seed": null },
+                "config": {
+                  "seed": null
+                },
                 "registered_name": null
               },
               "bias_initializer": {
@@ -115,7 +127,9 @@
               "dtype": {
                 "module": "keras",
                 "class_name": "DTypePolicy",
-                "config": { "name": "float32" },
+                "config": {
+                  "name": "float32"
+                },
                 "registered_name": null
               },
               "rate": 0.2,
@@ -131,7 +145,9 @@
               "dtype": {
                 "module": "keras",
                 "class_name": "DTypePolicy",
-                "config": { "name": "float32" },
+                "config": {
+                  "name": "float32"
+                },
                 "registered_name": null
               },
               "units": 17,
@@ -140,7 +156,9 @@
               "kernel_initializer": {
                 "module": "keras.initializers",
                 "class_name": "GlorotUniform",
-                "config": { "seed": null },
+                "config": {
+                  "seed": null
+                },
                 "registered_name": null
               },
               "bias_initializer": {
@@ -194,27 +212,35 @@
       "paths": ["group1-shard1of1.bin"],
       "weights": [
         {
-          "name": "sequential/dense/kernel",
+          "name": "dense/kernel",
           "shape": [126, 128],
           "dtype": "float32"
         },
-        { "name": "sequential/dense/bias", "shape": [128], "dtype": "float32" },
         {
-          "name": "sequential/dense_1/kernel",
+          "name": "dense/bias",
+          "shape": [128],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_1/kernel",
           "shape": [128, 64],
           "dtype": "float32"
         },
         {
-          "name": "sequential/dense_1/bias",
+          "name": "dense_1/bias",
           "shape": [64],
           "dtype": "float32"
         },
         {
-          "name": "sequential/dense_2/kernel",
+          "name": "dense_2/kernel",
           "shape": [64, 17],
           "dtype": "float32"
         },
-        { "name": "sequential/dense_2/bias", "shape": [17], "dtype": "float32" }
+        {
+          "name": "dense_2/bias",
+          "shape": [17],
+          "dtype": "float32"
+        }
       ]
     }
   ]

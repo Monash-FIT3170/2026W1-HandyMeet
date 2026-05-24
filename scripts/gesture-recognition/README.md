@@ -27,5 +27,12 @@ A minimum confidence threshold must be met to classify a gesture to reduce the c
 3. Generate labelled Mediapipe landmark data from the images: `uv run training_data/images_to_training_data.py`
 4. Generate mirrored training data to allow both hands: `uv run training_data/append_mirrored_data.py`
 5. Train the model on the labelled data: `uv run train_model.py`
+6. Export the trained model into the app's TensorFlow.js format and verify it loads in JavaScript: `cd ../.. && npm run gesture:model:export`
 
-The resultant weights will are saved in `./model.h5`.
+The training output is saved in `./model.h5`.
+
+The browser artifact is written to `../../public/model/`:
+
+- `model.json`
+- `group1-shard1of1.bin`
+

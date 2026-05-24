@@ -37,10 +37,6 @@ export const disableCamera: ActionHandler = async (
   await room.localParticipant.setCameraEnabled(false);
 };
 
-export const disconnectFromRoom: ActionHandler = (room: Room): void => {
-  room.disconnect();
-};
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const togglePen: ActionHandler = async (room: Room): Promise<void> => {
   // Placeholder for pen toggle functionality
