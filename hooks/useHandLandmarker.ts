@@ -4,14 +4,17 @@ import {
   FilesetResolver,
   DrawingUtils,
   type NormalizedLandmark,
-  type Landmark,
   type Category,
 } from '@mediapipe/tasks-vision';
+import {
+  buildHandFeatureVectors,
+  type HandFeatureVectors,
+} from '@/helpers/gestures/handLandmarkFeatures';
 
 export type LandmarkSnapshot = {
   landmarks: NormalizedLandmark[][];
-  worldLandmarks: Landmark[][];
   handedness: Category[][];
+  featureVectors: HandFeatureVectors;
   timestamp: number;
 };
 
@@ -166,8 +169,11 @@ export function useHandLandmarker({
         lastSnapshotTimeRef.current = now;
         onLandmarksSnapshotRef.current({
           landmarks: results.landmarks,
-          worldLandmarks: results.worldLandmarks,
           handedness: results.handedness,
+          featureVectors: buildHandFeatureVectors(
+            results.landmarks,
+            results.handedness,
+          ),
           timestamp: now,
         });
       }
