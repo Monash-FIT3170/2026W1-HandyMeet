@@ -154,9 +154,8 @@
       border-color 0.15s !important;
   }
   .lk-video-conference .lk-button:hover:not(:disabled) {
-    background-color: rgba(255, 255, 255, 0.11) !important;
+    background-color: transparent !important;
     color: #ececec !important;
-    border-color: rgba(255, 255, 255, 0.15) !important;
     box-shadow: none !important;
   }
   .lk-video-conference .lk-button[aria-pressed='true'] {
