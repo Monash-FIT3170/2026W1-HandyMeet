@@ -26,7 +26,7 @@ export default function Captions({ settings }: Props) {
     return (
       <div className="w-[500px] fixed bottom-20 left-1/2 -translate-x-1/2">
         <div className="flex gap-2 w-full mb-2 self-start items-center px-1">
-          <span className="px-2 h-6 flex items-center justify-center rounded bg-white/20 text-[13px] font-bold tracking-wider text-white/50 select-none">
+          <span className="px-2 h-6 flex items-center justify-center rounded bg-neutral-100/20 text-[13px] font-bold tracking-wider text-neutral-100/50 select-none">
             CC: Hidden
           </span>
         </div>
@@ -39,7 +39,7 @@ export default function Captions({ settings }: Props) {
       <div className="flex gap-2 w-full mb-2 self-start items-center px-1">
         <button
           onClick={() => setExpandCaptions(!expandCaptions)}
-          className="px-2 h-6 flex items-center justify-center rounded bg-white/20 text-[13px] font-bold tracking-wider hover:bg-white/30 transition text-white"
+          className="px-2 h-6 flex items-center justify-center rounded bg-neutral-100/20 text-[13px] font-bold tracking-wider hover:bg-neutral-100/30 transition text-neutral-100"
         >
           {expandCaptions ? 'Collapse' : 'Expand'}
         </button>
