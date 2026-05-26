@@ -1,5 +1,205 @@
 @import 'tailwindcss';
 
+@theme {
+  --color-primary-900: #10599a;
+  --color-primary-700: #4077ae;
+  --color-primary-500: #7099c2;
+  --color-primary-300: #9fbb97;
+  --color-primary-200: #cfddeb;
+  --color-primary-100: #e8eef5;
+
+  --color-secondary-900: #db4c77;
+  --color-secondary-700: #e88da8;
+  --color-secondary-500: #e994ad;
+  --color-secondary-300: #f1b7c9;
+  --color-secondary-200: #f89be4;
+  --color-secondary-100: #fceef2;
+
+  --color-neutral-900: #000000;
+  --color-neutral-800: #333333;
+  --color-neutral-600: #666666;
+  --color-neutral-400: #999999;
+  --color-neutral-200: #cccccc;
+  --color-neutral-100: #ececec;
+
+  --color-primary-900-rgb: 16 89 154;
+  --color-primary-500-rgb: 112 153 194;
+  --color-secondary-900-rgb: 219 76 119;
+  --color-neutral-100-rgb: 236 236 236;
+  --color-neutral-300-rgb: 255 255 255;
+
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+@layer base {
+  :root {
+    --lk-border-color: #333333;
+    --lk-bg-1: #333333;
+    --lk-bg-2: #000000;
+    --lk-bg1: #000000;
+    --lk-bg2: #333333;
+    --lk-bg3: #666666;
+    --lk-fg1: #ececec;
+    --lk-fg2: #cccccc;
+    --lk-fg3: #999999;
+    --lk-accent-fg: #7099c2;
+    --lk-control-fg: #ececec;
+    --lk-control-hover-bg: #4077ae;
+  }
+
+  .lk-participant-tile {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #333333;
+  }
+  .lk-participant-tile[data-lk-speaking='true'] {
+    border-color: #4077ae;
+    box-shadow: 0 0 0 2px #10599a55;
+  }
+
+  .lk-participant-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #ececec;
+  }
+
+  .lk-control-bar {
+    background: transparent;
+    border: none;
+    padding: 0;
+    gap: 0.5rem;
+  }
+
+  .lk-chat {
+    background: #000000;
+    border-left: 1px solid #333333;
+  }
+  .lk-chat-form-input {
+    background: #333333;
+    border: 1px solid #666666;
+    color: #ececec;
+    border-radius: 0.5rem;
+  }
+  .lk-chat-form-button {
+    background-color: #10599a;
+    color: #e8eef5;
+    border-radius: 0.5rem;
+  }
+  .lk-chat-form-button:hover {
+    background-color: #4077ae;
+  }
+
+  /* Toast */
+  .lk-toast {
+    background: #333333;
+    border: 1px solid #666666;
+    color: #ececec;
+    border-radius: 0.5rem;
+  }
+}
+
+@layer components {
+  button {
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    font-weight: 700;
+    transition: background-color 0.2s;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background-color: #10599a;
+    color: #ececec;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+  .btn-primary:hover {
+    background-color: #4077ae;
+  }
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background-color: transparent;
+    color: #ececec;
+    border: 1px solid #666666;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+  .btn-secondary:hover {
+    border-color: #9fbb97;
+    color: #9fbb97;
+  }
+  .btn-secondary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .lk-video-conference .lk-button {
+    background-color: transparent !important;
+    color: #aaaaaa !important;
+    border: 1px solid transparent !important; /* keeps layout stable, invisible */
+    border-radius: 0.5rem !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+    padding: 0.5rem 0.85rem !important;
+    height: 2.5rem !important;
+    transition:
+      background-color 0.15s,
+      color 0.15s,
+      border-color 0.15s !important;
+  }
+  .lk-video-conference .lk-button:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.11) !important;
+    color: #ececec !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    box-shadow: none !important;
+  }
+  .lk-video-conference .lk-button[aria-pressed='true'] {
+    background-color: rgba(16, 89, 154, 0.2) !important;
+    color: #7099c2 !important;
+    border-color: rgba(112, 153, 194, 0.25) !important;
+  }
+  .lk-video-conference .lk-button.lk-button-small {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 0 0.5rem 0.5rem 0 !important;
+    padding: 0 0.35rem !important;
+    color: #555555 !important;
+    height: 2.5rem !important;
+  }
+  .lk-video-conference .lk-button.lk-button-small:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.09) !important;
+    color: #aaaaaa !important;
+  }
+  .lk-video-conference .lk-button-leave {
+    background-color: rgba(219, 76, 119, 0.15) !important;
+    color: #e88da8 !important;
+    border-color: rgba(219, 76, 119, 0.3) !important;
+  }
+  .lk-video-conference .lk-button-leave:hover:not(:disabled) {
+    background-color: rgba(219, 76, 119, 0.28) !important;
+    color: #fceef2 !important;
+  }
+  .lk-video-conference .lk-button:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+  }
+}
+
 body {
-  font-family: var(--font-geist-sans, Arial, Helvetica, sans-serif);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+}
+h2 {
+  font-size: 1.875rem;
+  font-weight: 700;
 }
