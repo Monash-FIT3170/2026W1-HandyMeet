@@ -47,10 +47,7 @@ function isSameTrack(
   track: TrackReferenceOrPlaceholder,
   otherTrack?: TrackReferenceOrPlaceholder,
 ) {
-  if (!otherTrack) {
-    return false;
-  }
-
+  if (!otherTrack) return false;
   return (
     track.participant.identity === otherTrack.participant.identity &&
     track.source === otherTrack.source
@@ -113,6 +110,7 @@ export default function MeetingRoom({
   const isPredictingGestureRef = useRef(false);
   const layoutContext = useCreateLayoutContext();
   const autoFocusedScreenShare = useRef<TrackReference | null>(null);
+
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -124,7 +122,8 @@ export default function MeetingRoom({
     },
   ).filter(
     (track) => !track.participant.identity.toLowerCase().startsWith('agent-'),
-  ); // To remove the agent from the UI view
+  );
+
   const screenShareTracks = tracks
     .filter(isTrackReference)
     .filter((track) => track.publication.source === Track.Source.ScreenShare);
@@ -133,6 +132,7 @@ export default function MeetingRoom({
   const carouselTracks = tracks.filter(
     (track) => !isSameTrack(track, focusedTrack),
   );
+
   const setLocalVideoRef = useCallback((video: HTMLVideoElement | null) => {
     localVideoRef.current = video;
   }, []);
@@ -141,19 +141,18 @@ export default function MeetingRoom({
   }, []);
 
   const router = useRouter();
+
   const handleShowTranscriptSummary = useCallback(() => {
     setShowTranscriptSummary(true);
   }, []);
+
   const { isTracking } = useHandLandmarker({
     videoRef: localVideoRef,
     canvasRef: localCanvasRef,
     trackingEnabled,
     overlayEnabled,
     onLandmarksSnapshot: async (snapshot) => {
-      if (isPredictingGestureRef.current) {
-        return;
-      }
-
+      if (isPredictingGestureRef.current) return;
       isPredictingGestureRef.current = true;
       try {
         await predictGestureAction(
@@ -236,6 +235,7 @@ export default function MeetingRoom({
         onWidgetChange={setWidgetState}
       >
         <div className="lk-video-conference-inner">
+          {/*  Video area  */}
           {focusedTrack ? (
             <div className="lk-focus-layout-wrapper">
               <FocusLayoutContainer>
@@ -273,89 +273,195 @@ export default function MeetingRoom({
             </div>
           )}
 
-          {/* Control bar row — ControlBar sits inside a flex wrapper alongside custom buttons */}
+          {/*  Control bar  */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem',
-              borderTop: '1px solid var(--lk-border-color)',
+              justifyContent: 'space-between',
+              padding: '0.75rem 1.75rem',
+              position: 'relative',
             }}
           >
-            <ControlBar
-              controls={{ chat: true, settings: false, leave: false }}
-              style={{ border: 'none', padding: 0, gap: '0.5rem' }}
+            {/* Gradient accent line */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '2px',
+                background:
+                  'linear-gradient(90deg, transparent 0%, #10599A 20%, #7099C2 50%, #DB4C77 80%, transparent 100%)',
+                opacity: 0.9,
+              }}
             />
-            {/* Captions button — settings panel floats above it */}
-            <div style={{ position: 'relative' }}>
-              {captionsOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 'calc(100% + 0.5rem)',
-                    right: 0,
-                    zIndex: 9999,
-                  }}
+
+            {/* Left spacer */}
+            <div style={{ flex: 1 }} />
+
+            {/* Centre pill */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                borderRadius: '999px',
+                padding: '0.3rem 0.5rem',
+              }}
+            >
+              <ControlBar
+                controls={{
+                  microphone: true,
+                  camera: true,
+                  screenShare: true,
+                  chat: true,
+                  settings: false,
+                  leave: false,
+                }}
+                style={{
+                  border: 'none',
+                  padding: 0,
+                  gap: '0.25rem',
+                  display: 'contents',
+                }}
+              />
+
+              {/* Divider */}
+              <div
+                style={{
+                  width: '1px',
+                  height: '1.5rem',
+                  background: 'rgba(255,255,255,0.08)',
+                  margin: '0 0.25rem',
+                  flexShrink: 0,
+                }}
+              />
+
+              {/* Captions */}
+              <div style={{ position: 'relative' }}>
+                {captionsOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 0.75rem)',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 9999,
+                    }}
+                  >
+                    <TranscriptionSettings
+                      settings={captionSettings}
+                      onChange={onCaptionSettingsChange}
+                      open={captionsOpen}
+                      onClose={() => setCaptionsOpen(false)}
+                    />
+                  </div>
+                )}
+                <button
+                  className="lk-button"
+                  aria-pressed={captionsOpen}
+                  onClick={() => setCaptionsOpen((v) => !v)}
+                  title="Captions"
                 >
-                  <TranscriptionSettings
-                    settings={captionSettings}
-                    onChange={onCaptionSettingsChange}
-                    open={captionsOpen}
-                    onClose={() => setCaptionsOpen(false)}
-                  />
-                </div>
-              )}
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <path d="M8 10.5h4" />
+                    <path d="M14 10.5h4" />
+                    <path d="M8 14.5h4" />
+                    <path d="M14 14.5h2" />
+                  </svg>
+                  Captions
+                </button>
+              </div>
+
+              {/* Gestures */}
+              <HandTrackingButton
+                trackingEnabled={trackingEnabled}
+                overlayEnabled={overlayEnabled}
+                isTracking={isTracking}
+                isCameraEnabled={isCameraEnabled}
+                onToggleTracking={handleToggleTracking}
+                onToggleOverlay={handleToggleOverlay}
+              />
+            </div>
+
+            {/* Right  Leave */}
+            <div
+              style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}
+            >
               <button
-                className="lk-button"
-                aria-pressed={captionsOpen}
-                onClick={() => setCaptionsOpen((v) => !v)}
-                title="Customise captions"
+                onClick={handleLeave}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.5rem 1.1rem',
+                  borderRadius: '999px',
+                  border: '1px solid rgba(219,76,119,0.3)',
+                  background: 'rgba(219,76,119,0.12)',
+                  color: '#E88DA8',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  transition:
+                    'background 0.15s, border-color 0.15s, color 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  const b = e.currentTarget as HTMLButtonElement;
+                  b.style.background = 'rgba(219,76,119,0.28)';
+                  b.style.borderColor = 'rgba(219,76,119,0.6)';
+                  b.style.color = '#FCEEF2';
+                }}
+                onMouseLeave={(e) => {
+                  const b = e.currentTarget as HTMLButtonElement;
+                  b.style.background = 'rgba(219,76,119,0.12)';
+                  b.style.borderColor = 'rgba(219,76,119,0.3)';
+                  b.style.color = '#E88DA8';
+                }}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                  <path d="M8 10.5h4" />
-                  <path d="M14 10.5h4" />
-                  <path d="M8 14.5h4" />
-                  <path d="M14 14.5h2" />
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
-                Captions
+                Leave
               </button>
             </div>
-            <button className="lk-button" onClick={handleLeave}>
-              Leave
-            </button>
-
-            <HandTrackingButton
-              trackingEnabled={trackingEnabled}
-              overlayEnabled={overlayEnabled}
-              isTracking={isTracking}
-              isCameraEnabled={isCameraEnabled}
-              onToggleTracking={handleToggleTracking}
-              onToggleOverlay={handleToggleOverlay}
-            />
-
-            {showTranscriptSummary && (
-              <TranscriptSummary
-                transcript={transcriptLines}
-                onClose={handleSummaryClose}
-              />
-            )}
           </div>
+          {/*  End control bar  */}
+          {/* Transcript summary overlay */}
+          {showTranscriptSummary && (
+            <TranscriptSummary
+              transcript={transcriptLines}
+              onClose={handleSummaryClose}
+            />
+          )}
         </div>
+        {/*  End lk-video-conference-inner  */}
 
-        {/* Chat panel — shown/hidden by LiveKit widget state */}
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
       </LayoutContextProvider>
 
