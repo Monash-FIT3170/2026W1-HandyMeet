@@ -113,7 +113,7 @@ ${summary}
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-neutral-800/50 flex items-center justify-center p-4">
       <div className="bg-neutral-900 w-full max-w-3xl rounded-xl shadow-xl overflow-hidden border border-neutral-800">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
@@ -135,7 +135,7 @@ ${summary}
             onClick={() => setActiveTab('transcript')}
             className={`flex-1 py-3 font-medium ${
               activeTab === 'transcript'
-                ? 'border-b-2 border-emerald-500 text-neutral-100'
+                ? 'border-b-2 border-primary-500 text-neutral-100'
                 : 'text-neutral-500'
             }`}
           >
@@ -146,7 +146,7 @@ ${summary}
             onClick={() => setActiveTab('summary')}
             className={`flex-1 py-3 font-medium ${
               activeTab === 'summary'
-                ? 'border-b-2 border-emerald-500 text-neutral-100'
+                ? 'border-b-2 border-primary-500 text-neutral-100'
                 : 'text-neutral-500'
             }`}
           >
@@ -172,7 +172,7 @@ ${summary}
           <button
             onClick={generateSummary}
             disabled={loading}
-            className="px-4 py-2 rounded bg-emerald-500 text-white hover:bg-emerald-600 disabled:opacity-50"
+            className="px-4 py-2 rounded bg-primary-900 text-neutral-100 hover:bg-primary-700 disabled:opacity-50"
           >
             {loading ? 'Generating...' : 'Generate Summary'}
           </button>

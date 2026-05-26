@@ -45,9 +45,9 @@ export default function RoomClient({
   if (error) {
     return (
       <div className="h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-red-500">{error}</p>
+        <p className="text-secondary-900">{error}</p>
         <button
-          className="text-emerald-500 border border-emerald-500 rounded-lg px-5 py-2 text-[15px] font-semibold cursor-pointer hover:bg-emerald-500 hover:text-white transition-colors"
+          className="text-primary-500 border border-primary-500 rounded-lg px-5 py-2 text-[15px] font-semibold cursor-pointer hover:bg-primary-900 hover:text-neutral-100 transition-colors"
           onClick={() => router.push('/')}
         >
           Back to Home
