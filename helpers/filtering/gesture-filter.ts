@@ -6,7 +6,7 @@ let currentGesture: string | null = null;
 let gestureStart = 0;
 let triggered = false;
 
-const HOLD_TIME = 1000; // Time in ms to consider a gesture as "held"
+const HOLD_TIME = 1000;
 
 export async function processGesture(
   room: Room,
@@ -31,7 +31,6 @@ export async function processGesture(
   const heldDuration = now - gestureStart;
   if (heldDuration >= HOLD_TIME && !triggered) {
     if (currentGesture === Gesture.EndCall) {
-      // TODO: add confirmation step before disconnecting
       if (confirm('Are you sure you want to end the call?')) {
         disconnect?.();
       }
