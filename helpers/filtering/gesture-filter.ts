@@ -31,7 +31,9 @@ export async function processGesture(
   const heldDuration = now - gestureStart;
   if (heldDuration >= HOLD_TIME && !triggered) {
     if (currentGesture === Gesture.EndCall) {
-      disconnect?.();
+      if (confirm('Are you sure you want to end the call?')) {
+        disconnect?.();
+      }
     } else {
       await handleAction(room, currentGesture as Gesture);
     }
