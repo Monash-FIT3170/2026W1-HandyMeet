@@ -18,6 +18,18 @@ const sendReaction = async (room: Room, reaction: Reaction): Promise<void> => {
     undefined,
     ReactionTopic,
   );
+  setTimeout(() => {
+    const clearedPayload = new TextEncoder().encode(
+      JSON.stringify({ reaction: null }),
+    );
+    room.emit(
+      RoomEvent.DataReceived,
+      clearedPayload,
+      room.localParticipant as unknown as RemoteParticipant,
+      undefined,
+      ReactionTopic,
+    );
+  }, 5000);
 };
 
 export const enableMicrophone: ActionHandler = async (
