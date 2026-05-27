@@ -1,4 +1,4 @@
-import type { Room } from 'livekit-client';
+import { Room, RemoteParticipant, RoomEvent } from 'livekit-client';
 import { Reaction, ReactionTopic } from '../../constants/reactions';
 
 /**
@@ -11,6 +11,13 @@ export type ActionHandler = (room: Room) => Promise<void> | void;
 const sendReaction = async (room: Room, reaction: Reaction): Promise<void> => {
   const payload = new TextEncoder().encode(JSON.stringify({ reaction }));
   await room.localParticipant.publishData(payload, { topic: ReactionTopic });
+  room.emit(
+    RoomEvent.DataReceived,
+    payload,
+    room.localParticipant as unknown as RemoteParticipant,
+    undefined,
+    ReactionTopic,
+  );
 };
 
 export const enableMicrophone: ActionHandler = async (
