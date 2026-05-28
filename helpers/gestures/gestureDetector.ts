@@ -128,6 +128,21 @@ const predictGesture = async (
   return getBestGesturePrediction(output);
 };
 
+const qualifiesAsTwoHandGesture = (
+  twoHand: GesturePredictionCandidate,
+  bestSingleHand: GesturePredictionCandidate | undefined,
+): boolean => {
+  const isTwoHandGesture = TWO_HAND_GESTURES.has(twoHand.prediction.label);
+  const clearsThreshold =
+    twoHand.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD;
+  const beatsBestSingleHand =
+    bestSingleHand === undefined ||
+    twoHand.prediction.score >=
+      bestSingleHand.prediction.score + TWO_HAND_PREFERENCE_MARGIN;
+
+  return isTwoHandGesture && clearsThreshold && beatsBestSingleHand;
+};
+
 export const predictGestureAction = async (
   room: Room,
   featureVectors: HandFeatureVectors,
@@ -180,18 +195,11 @@ export const predictGestureAction = async (
     current.prediction.score > best.prediction.score ? current : best,
   );
 
-  const qualifyingTwoHandCandidate =
-    twoHandCandidate !== undefined &&
-    TWO_HAND_GESTURES.has(twoHandCandidate.prediction.label) &&
-    twoHandCandidate.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD &&
-    (bestSingleHandCandidate === undefined ||
-      twoHandCandidate.prediction.score >=
-        bestSingleHandCandidate.prediction.score + TWO_HAND_PREFERENCE_MARGIN)
-      ? twoHandCandidate
-      : undefined;
-
   const chosenCandidate =
-    qualifyingTwoHandCandidate ?? bestSingleHandCandidate ?? fallbackCandidate;
+    twoHandCandidate &&
+    qualifiesAsTwoHandGesture(twoHandCandidate, bestSingleHandCandidate)
+      ? twoHandCandidate
+      : (bestSingleHandCandidate ?? fallbackCandidate);
 
   const acceptanceThreshold =
     chosenCandidate.candidateName === 'both-hands'
