@@ -4,6 +4,8 @@ import {
   Gesture,
   MULTI_HAND_CONFIDENCE_THRESHOLD,
   SINGLE_HAND_CONFIDENCE_THRESHOLD,
+  TWO_HAND_GESTURES,
+  TWO_HAND_PREFERENCE_MARGIN,
 } from '@/constants/gestures';
 import { Reaction } from '@/constants/reactions';
 import gestureLabels from '@/scripts/gesture-recognition/model_labels.json';
@@ -163,13 +165,33 @@ export const predictGestureAction = async (
     (candidate) => candidate.candidateName === 'both-hands',
   );
 
-  const chosenCandidate =
-    twoHandCandidate &&
-    twoHandCandidate.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD
-      ? twoHandCandidate
-      : candidates.reduce((best, current) =>
+  const singleHandCandidates = candidates.filter(
+    (candidate) => candidate.candidateName !== 'both-hands',
+  );
+
+  const bestSingleHandCandidate =
+    singleHandCandidates.length > 0
+      ? singleHandCandidates.reduce((best, current) =>
           current.prediction.score > best.prediction.score ? current : best,
-        );
+        )
+      : undefined;
+
+  const fallbackCandidate = candidates.reduce((best, current) =>
+    current.prediction.score > best.prediction.score ? current : best,
+  );
+
+  const qualifyingTwoHandCandidate =
+    twoHandCandidate !== undefined &&
+    TWO_HAND_GESTURES.has(twoHandCandidate.prediction.label) &&
+    twoHandCandidate.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD &&
+    (bestSingleHandCandidate === undefined ||
+      twoHandCandidate.prediction.score >=
+        bestSingleHandCandidate.prediction.score + TWO_HAND_PREFERENCE_MARGIN)
+      ? twoHandCandidate
+      : undefined;
+
+  const chosenCandidate =
+    qualifyingTwoHandCandidate ?? bestSingleHandCandidate ?? fallbackCandidate;
 
   const acceptanceThreshold =
     chosenCandidate.candidateName === 'both-hands'
