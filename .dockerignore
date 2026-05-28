@@ -1,0 +1,7 @@
+node_modules
+.next
+.git
+.env*
+scripts/
+!scripts/gesture-recognition/model_labels.json
+*.md
