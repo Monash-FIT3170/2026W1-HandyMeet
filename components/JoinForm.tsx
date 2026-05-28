@@ -17,18 +17,19 @@ export default function JoinForm() {
 
   function joinRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
-    if (!username.trim() || !roomCode.trim()) return;
-    router.push(
-      `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
-    );
-  }
-
-  function createRoom() {
     if (!username.trim()) return;
-    const code = generateRoomCode();
-    router.push(
-      `/room/${code}?username=${encodeURIComponent(username.trim())}`,
-    );
+    if (!roomCode.trim()) {
+      // Create a random romo code and join that room
+      const code = generateRoomCode();
+      router.push(
+        `/room/${code}?username=${encodeURIComponent(username.trim())}`,
+      );
+    } else {
+      // Join the specified room
+      router.push(
+        `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
+      );
+    }
   }
 
   const canAct = username.trim().length > 0;
@@ -119,32 +120,12 @@ export default function JoinForm() {
                 maxLength={20}
                 autoComplete="off"
               />
-              <button
-                onClick={joinRoom}
-                disabled={!canJoin}
-                className="rounded-lg px-5 py-3 text-[15px] font-semibold whitespace-nowrap transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                style={{ backgroundColor: '#10599A', color: '#E8EEF5' }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#4077AE')
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = '#10599A')
-                }
-              >
-                Join
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 text-neutral-800 text-xs my-1">
-              <span className="flex-1 h-px bg-neutral-800" />
-              or
-              <span className="flex-1 h-px bg-neutral-800" />
             </div>
 
             <button
               type="button"
               disabled={!canAct}
-              onClick={createRoom}
+              onClick={joinRoom}
               className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
               style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
               onMouseEnter={(e) =>
@@ -154,7 +135,7 @@ export default function JoinForm() {
                 (e.currentTarget.style.backgroundColor = '#DB4C77')
               }
             >
-              Create a room
+              Join Room
             </button>
           </div>
         </div>
