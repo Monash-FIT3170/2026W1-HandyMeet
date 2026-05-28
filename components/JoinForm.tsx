@@ -19,7 +19,7 @@ export default function JoinForm() {
     e.preventDefault();
     if (!username.trim()) return;
     if (!roomCode.trim()) {
-      // Create a random romo code and join that room
+      // Create a random room code and join that room
       const code = generateRoomCode();
       router.push(
         `/room/${code}?username=${encodeURIComponent(username.trim())}`,
@@ -33,7 +33,6 @@ export default function JoinForm() {
   }
 
   const canAct = username.trim().length > 0;
-  const canJoin = canAct && roomCode.trim().length > 0;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
