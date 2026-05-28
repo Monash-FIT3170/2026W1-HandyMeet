@@ -1,5 +1,17 @@
 # 2026W1-HandyMeet
 
+## How to run
+
+The application can by run by executing
+
+`docker compose up --build`
+
+This will build the required container images.
+
+Subsequent runs (without changes) can be run without the `--build` flag
+
+## Team Member Contacts
+
 1. Richard Li RichardLi88 rlii0102@student.monash.edu
 2. Dasun Udugoda Dasun-Udugoda wudu0002@student.monash.edu
 3. May McGrath maymcgrath mmcg0028@student.monash.edu
