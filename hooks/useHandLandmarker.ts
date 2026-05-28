@@ -118,9 +118,28 @@ export function useHandLandmarker({
         return;
       }
 
-      // Match canvas dimensions to the video so landmarks are positioned correctly
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Match canvas dimensions to the client video so landmarks are positioned correctly
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+
+      const videoRatio = video.videoWidth / video.videoHeight;
+      const canvasRatio = canvas.width / canvas.height;
+
+      let scaleX = 1;
+      let scaleY = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      // scaling calculations for videos that don't match the aspect ratio of the container
+      if (videoRatio > canvasRatio) {
+        const renderWidth = canvas.height * videoRatio;
+        scaleX = renderWidth / canvas.width;
+        offsetX = (renderWidth - canvas.width) / 2 / canvas.width;
+      } else if (videoRatio < canvasRatio) {
+        const renderHeight = canvas.width / videoRatio;
+        scaleY = renderHeight / canvas.height;
+        offsetY = (renderHeight - canvas.height) / 2 / canvas.height;
+      }
 
       lastVideoTimeRef.current = video.currentTime;
 
@@ -140,13 +159,19 @@ export function useHandLandmarker({
           const drawingUtils = new DrawingUtils(ctx);
 
           for (const landmarks of results.landmarks) {
+            const scaledLandmarks = landmarks.map((landmark) => ({
+              ...landmark,
+              x: landmark.x * scaleX - offsetX,
+              y: landmark.y * scaleY - offsetY,
+            }));
+
             drawingUtils.drawConnectors(
-              landmarks,
+              scaledLandmarks,
               HandLandmarker.HAND_CONNECTIONS,
               { color: '#00FF00', lineWidth: 2 },
             );
 
-            drawingUtils.drawLandmarks(landmarks, {
+            drawingUtils.drawLandmarks(scaledLandmarks, {
               color: '#FF0000',
               lineWidth: 1,
               radius: 3,
