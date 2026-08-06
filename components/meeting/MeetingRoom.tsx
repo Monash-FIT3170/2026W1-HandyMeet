@@ -34,6 +34,7 @@ import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import LeaveConfirmDialog from '@/components/LeaveConfirmDialog';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
+import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 
 const initialWidgetState: WidgetState = {
