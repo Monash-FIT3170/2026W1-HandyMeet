@@ -11,6 +11,14 @@ export type LiveActionItem = {
 
 const POLL_INTERVAL_MS = 12000;
 
+// Matches a line ending in sentence terminating punctuation, optionally
+// followed by a closing quote/bracket (e.g. `done."` or `right?)`).
+const SENTENCE_END_RE = /[.!?][")\]]?$/;
+
+function isLineComplete(line: string): boolean {
+  return SENTENCE_END_RE.test(line.trim());
+}
+
 type UseLiveActionItemsOptions = {
   transcriptLines: string[];
   enabled?: boolean;
@@ -50,8 +58,18 @@ export function useLiveActionItems({
         ? sentLineCountRef.current - 1
         : sentLineCountRef.current;
 
-      const delta = cleaned.slice(startIndex);
+      let delta = cleaned.slice(startIndex);
       if (delta.length === 0) return;
+
+      const trailingIncomplete = !isLineComplete(delta[delta.length - 1]);
+      if (trailingIncomplete) {
+        delta = delta.slice(0, -1);
+      }
+      if (delta.length === 0) return;
+
+      const sentUpToIndex = trailingIncomplete
+        ? cleaned.length - 1
+        : cleaned.length;
 
       isFetchingRef.current = true;
       setIsLoading(true);
@@ -86,8 +104,8 @@ export function useLiveActionItems({
           setActionItems(actionItemsRef.current);
         }
 
-        sentLineCountRef.current = cleaned.length;
-        sentTrailingLineRef.current = cleaned[cleaned.length - 1];
+        sentLineCountRef.current = sentUpToIndex;
+        sentTrailingLineRef.current = cleaned[sentUpToIndex - 1];
       } catch (err) {
         console.error('Live action item extraction failed:', err);
         setError(
