@@ -35,6 +35,7 @@ import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import TranscriptSummary from '@/components/TranscriptSummary';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
+import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 
 const initialWidgetState: WidgetState = {
@@ -218,6 +219,10 @@ export default function MeetingRoom({
   const transcriptLines = transcriptions.map(
     (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
   );
+
+  // Polls Gemini every 12s for live action items while the meeting runs.
+  const liveActionItems = useLiveActionItems({ transcriptLines });
+  void liveActionItems;
 
   const handleLeave = useCallback(() => {
     setShowTranscriptSummary(true);
