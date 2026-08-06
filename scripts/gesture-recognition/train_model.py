@@ -13,7 +13,7 @@ try:
     import tensorflow as tf
 except ModuleNotFoundError as exc:
     print(
-        "Missing dependency. Ensure all dependencies are installed:\n"
+        "Missing dependency. Ensure all dependencies are installed:\n" +
         "  uv pip install -r requirements.txt",
         file=sys.stderr,
     )
@@ -27,7 +27,7 @@ MIRRORED_CSV_PATH = (
 CSV_PATH = ROOT_DIR / "training_data" / "02_training_data" / "hand_landmarks.csv"
 MODEL_PATH = ROOT_DIR / "model.h5"
 LABELS_PATH = ROOT_DIR / "model_labels.json"
-EPOCHS = 50
+EPOCHS = 80
 BATCH_SIZE = 32
 
 
@@ -76,12 +76,16 @@ def build_model(input_dim: int, num_classes: int) -> tf.keras.Model:
     model = tf.keras.Sequential(
         [
             tf.keras.layers.Input(shape=(input_dim,)),
+            tf.keras.layers.Dense(256),
+            tf.keras.layers.BatchNormalization(),
+            tf.keras.layers.ReLU(),
+            tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Dense(128, activation="relu"),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Dense(64, activation="relu"),
             tf.keras.layers.Dropout(0.2),
             tf.keras.layers.Dense(num_classes, activation="softmax"),
-        ]
+        ],
     )
 
     model.compile(
@@ -108,13 +112,20 @@ def main() -> int:
 
     model = build_model(x_train.shape[1], len(class_names))
     print(f"Training model from {csv_path}")
-    model.fit(
+    _ = model.fit(
         x_train,
         y_train,
         epochs=EPOCHS,
         batch_size=batch_size,
         shuffle=True,
         verbose=1,
+        callbacks=[
+            tf.keras.callbacks.EarlyStopping(
+                monitor="val_loss",
+                patience=10,
+                restore_best_weights=True,
+            )
+        ],
     )
 
     model.save(MODEL_PATH)
