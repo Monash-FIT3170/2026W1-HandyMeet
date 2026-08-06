@@ -113,9 +113,11 @@ def main() -> int:
 
     IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
-    video_paths = sorted(VIDEOS_DIR.glob("*.mp4"))
+    video_paths = sorted(
+        list(VIDEOS_DIR.glob("*.mp4")) + list(VIDEOS_DIR.glob("*.MOV"))
+    )
     if not video_paths:
-        print(f"No .mp4 files found in {VIDEOS_DIR}", file=sys.stderr)
+        print(f"No .mp4 or .MOV files found in {VIDEOS_DIR}", file=sys.stderr)
         return 1
 
     for gesture_name, gesture_video_paths in grouped_video_paths(video_paths).items():
