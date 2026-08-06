@@ -220,7 +220,7 @@ export default function MeetingRoom({
     (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
   );
 
-  // Polls Gemini every 12s for live action items while the meeting runs.
+  // Polls Groq every 12s for live action items while the meeting runs.
   const liveActionItems = useLiveActionItems({ transcriptLines });
   void liveActionItems;
 

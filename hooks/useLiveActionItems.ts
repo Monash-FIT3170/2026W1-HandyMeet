@@ -6,6 +6,7 @@ import { cleanTranscriptLines } from '@/helpers/transcript';
 export type LiveActionItem = {
   task: string;
   owner: string | null;
+  dueDate: string | null;
 };
 
 const POLL_INTERVAL_MS = 12000;
@@ -27,8 +28,11 @@ export function useLiveActionItems({
   // transcript update (transcriptions stream in far more often than 12s).
   const transcriptLinesRef = useRef(transcriptLines);
   transcriptLinesRef.current = transcriptLines;
-  const lastSentTranscriptRef = useRef('');
+  const actionItemsRef = useRef<LiveActionItem[]>([]);
   const isFetchingRef = useRef(false);
+
+  const sentLineCountRef = useRef(0);
+  const sentTrailingLineRef = useRef('');
 
   useEffect(() => {
     if (!enabled) return;
@@ -36,11 +40,18 @@ export function useLiveActionItems({
     const tick = async () => {
       if (isFetchingRef.current) return;
 
-      const transcript = cleanTranscriptLines(transcriptLinesRef.current).join(
-        '\n',
-      );
+      const cleaned = cleanTranscriptLines(transcriptLinesRef.current);
+      if (cleaned.length === 0) return;
 
-      if (!transcript || transcript === lastSentTranscriptRef.current) return;
+      const trailingLineRevised =
+        sentLineCountRef.current > 0 &&
+        cleaned[sentLineCountRef.current - 1] !== sentTrailingLineRef.current;
+      const startIndex = trailingLineRevised
+        ? sentLineCountRef.current - 1
+        : sentLineCountRef.current;
+
+      const delta = cleaned.slice(startIndex);
+      if (delta.length === 0) return;
 
       isFetchingRef.current = true;
       setIsLoading(true);
@@ -50,7 +61,10 @@ export function useLiveActionItems({
         const response = await fetch('/api/live-insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript }),
+          body: JSON.stringify({
+            transcript: delta.join('\n'),
+            knownActionItems: actionItemsRef.current,
+          }),
         });
 
         if (!response.ok) {
@@ -58,8 +72,22 @@ export function useLiveActionItems({
         }
 
         const data = await response.json();
-        setActionItems(Array.isArray(data.actionItems) ? data.actionItems : []);
-        lastSentTranscriptRef.current = transcript;
+        const newActionItems: LiveActionItem[] = Array.isArray(
+          data.newActionItems,
+        )
+          ? data.newActionItems
+          : [];
+
+        if (newActionItems.length > 0) {
+          actionItemsRef.current = [
+            ...actionItemsRef.current,
+            ...newActionItems,
+          ];
+          setActionItems(actionItemsRef.current);
+        }
+
+        sentLineCountRef.current = cleaned.length;
+        sentTrailingLineRef.current = cleaned[cleaned.length - 1];
       } catch (err) {
         console.error('Live action item extraction failed:', err);
         setError(
