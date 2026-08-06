@@ -103,6 +103,7 @@ export default function MeetingRoom({
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [showTranscriptSummary, setShowTranscriptSummary] = useState(false);
+  const [insightsEnabled, setInsightsEnabled] = useState(false);
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
@@ -221,7 +222,10 @@ export default function MeetingRoom({
   );
 
   // Polls Groq every 12s for live action items while the meeting runs.
-  const liveActionItems = useLiveActionItems({ transcriptLines });
+  const liveActionItems = useLiveActionItems({
+    transcriptLines,
+    enabled: insightsEnabled,
+  });
   void liveActionItems;
 
   const handleLeave = useCallback(() => {
@@ -399,6 +403,35 @@ export default function MeetingRoom({
                 onToggleTracking={handleToggleTracking}
                 onToggleOverlay={handleToggleOverlay}
               />
+
+              {/* Live insights */}
+              <button
+                className="lk-button"
+                aria-pressed={insightsEnabled}
+                onClick={() => setInsightsEnabled((prev) => !prev)}
+                title="Live insights"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3v2" />
+                  <path d="M12 19v2" />
+                  <path d="M5 5l1.5 1.5" />
+                  <path d="M17.5 17.5L19 19" />
+                  <path d="M5 19l1.5-1.5" />
+                  <path d="M17.5 6.5L19 5" />
+                  <circle cx="12" cy="12" r="4" />
+                </svg>
+                Insights
+              </button>
             </div>
 
             {/* Right  Leave */}
