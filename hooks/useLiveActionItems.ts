@@ -3,10 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { cleanTranscriptLines } from '@/helpers/transcript';
 
+export type ActionItemStatus = 'suggested' | 'accepted' | 'dismissed';
+
 export type LiveActionItem = {
+  id: string;
   task: string;
   owner: string | null;
   dueDate: string | null;
+  status: ActionItemStatus;
+  assigneeId: string | null;
 };
 
 const POLL_INTERVAL_MS = 12000;
@@ -17,6 +22,10 @@ const SENTENCE_END_RE = /[.!?][")\]]?$/;
 
 function isLineComplete(line: string): boolean {
   return SENTENCE_END_RE.test(line.trim());
+}
+
+function makeId(): string {
+  return crypto.randomUUID();
 }
 
 type UseLiveActionItemsOptions = {
@@ -76,12 +85,18 @@ export function useLiveActionItems({
       setError(null);
 
       try {
+        // Strip client-only fields before sending back - the
+        // prompt only needs task/owner/dueDate to recognise repeats.
+        const knownActionItems = actionItemsRef.current.map(
+          ({ task, owner, dueDate }) => ({ task, owner, dueDate }),
+        );
+
         const response = await fetch('/api/live-insights', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             transcript: delta.join('\n'),
-            knownActionItems: actionItemsRef.current,
+            knownActionItems,
           }),
         });
 
@@ -90,13 +105,20 @@ export function useLiveActionItems({
         }
 
         const data = await response.json();
-        const newActionItems: LiveActionItem[] = Array.isArray(
-          data.newActionItems,
-        )
-          ? data.newActionItems
-          : [];
+        const rawNewItems: Array<{
+          task: string;
+          owner: string | null;
+          dueDate: string | null;
+        }> = Array.isArray(data.newActionItems) ? data.newActionItems : [];
 
-        if (newActionItems.length > 0) {
+        if (rawNewItems.length > 0) {
+          const newActionItems: LiveActionItem[] = rawNewItems.map((item) => ({
+            ...item,
+            id: makeId(),
+            status: 'suggested',
+            assigneeId: null,
+          }));
+
           actionItemsRef.current = [
             ...actionItemsRef.current,
             ...newActionItems,
@@ -123,5 +145,39 @@ export function useLiveActionItems({
     return () => clearInterval(intervalId);
   }, [enabled]);
 
-  return { actionItems, isLoading, error };
+  function updateItem(id: string, patch: Partial<LiveActionItem>) {
+    actionItemsRef.current = actionItemsRef.current.map((item) =>
+      item.id === id ? { ...item, ...patch } : item,
+    );
+    setActionItems(actionItemsRef.current);
+  }
+
+  function acceptItem(id: string) {
+    updateItem(id, { status: 'accepted' });
+  }
+
+  function dismissItem(id: string) {
+    updateItem(id, { status: 'dismissed' });
+  }
+
+  function editItem(
+    id: string,
+    updates: Partial<Pick<LiveActionItem, 'task' | 'owner' | 'dueDate'>>,
+  ) {
+    updateItem(id, updates);
+  }
+
+  function assignUser(id: string, assigneeId: string | null) {
+    updateItem(id, { assigneeId });
+  }
+
+  return {
+    actionItems,
+    isLoading,
+    error,
+    acceptItem,
+    dismissItem,
+    editItem,
+    assignUser,
+  };
 }
