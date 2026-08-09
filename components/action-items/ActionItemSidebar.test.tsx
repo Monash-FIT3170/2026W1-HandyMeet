@@ -1,21 +1,34 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
+import type { LiveActionItem } from '@/hooks/useLiveActionItems';
 import ActionItemSidebar from './ActionItemSidebar';
+
+const suggestion: LiveActionItem = {
+  id: 'suggestion-1',
+  task: 'Prepare the sprint demonstration',
+  owner: 'Avery',
+  dueDate: null,
+  status: 'suggested',
+  assigneeId: null,
+};
 
 function renderSidebar({
   open = true,
   isLoading = false,
+  items = [],
   children,
 }: {
   open?: boolean;
   isLoading?: boolean;
+  items?: LiveActionItem[];
   children?: React.ReactNode;
 } = {}) {
   return renderToStaticMarkup(
     <ActionItemSidebar
       open={open}
       isLoading={isLoading}
+      items={items}
       onCollapse={() => undefined}
       onExpand={() => undefined}
     >
@@ -45,6 +58,30 @@ test('renders supplied content instead of the empty state', () => {
 
   assert.match(markup, /Suggested action item/);
   assert.doesNotMatch(markup, /No new action items yet/);
+});
+
+test('renders suggested action items', () => {
+  const markup = renderSidebar({ items: [suggestion] });
+
+  assert.match(markup, /Suggestions/);
+  assert.match(markup, /Avery/);
+  assert.match(markup, /Prepare the sprint demonstration/);
+  assert.doesNotMatch(markup, /No new action items yet/);
+});
+
+test('keeps dismissed action items out of the visible list', () => {
+  const markup = renderSidebar({
+    items: [
+      {
+        ...suggestion,
+        status: 'dismissed',
+        task: 'This dismissed task must stay hidden',
+      },
+    ],
+  });
+
+  assert.doesNotMatch(markup, /This dismissed task must stay hidden/);
+  assert.match(markup, /No new action items yet/);
 });
 
 test('hides the sidebar from assistive technology when collapsed', () => {

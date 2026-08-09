@@ -1,6 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import type { LiveActionItem } from '@/hooks/useLiveActionItems';
+import ActionItemCard from './ActionItemCard';
 
 const SOFT_GLASS_SURFACE =
   'border border-white/15 bg-[linear-gradient(145deg,rgba(255,255,255,0.06),transparent_42%),rgba(12,17,25,0.72)] backdrop-blur-xl backdrop-saturate-125';
@@ -8,6 +10,7 @@ const SOFT_GLASS_SURFACE =
 type ActionItemSidebarProps = {
   open: boolean;
   isLoading: boolean;
+  items: LiveActionItem[];
   onCollapse: () => void;
   onExpand: () => void;
   children?: ReactNode;
@@ -16,10 +19,13 @@ type ActionItemSidebarProps = {
 export default function ActionItemSidebar({
   open,
   isLoading,
+  items,
   onCollapse,
   onExpand,
   children,
 }: ActionItemSidebarProps) {
+  const suggestions = items.filter((item) => item.status === 'suggested');
+
   return (
     <>
       {!open && (
@@ -78,11 +84,29 @@ export default function ActionItemSidebar({
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {children ?? (
-            <div className="text-neutral-400 flex h-full min-h-36 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] text-center">
-              <p className="text-sm">No new action items yet</p>
-            </div>
-          )}
+          {children ??
+            (suggestions.length > 0 ? (
+              <section aria-labelledby="suggested-action-items">
+                <div className="text-neutral-400 mb-3 flex items-center justify-between text-xs">
+                  <h3
+                    id="suggested-action-items"
+                    className="font-bold uppercase tracking-wider"
+                  >
+                    Suggestions
+                  </h3>
+                  <span>{suggestions.length}</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {suggestions.map((item) => (
+                    <ActionItemCard key={item.id} item={item} />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <div className="text-neutral-400 flex h-full min-h-36 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] text-center">
+                <p className="text-sm">No new action items yet</p>
+              </div>
+            ))}
         </div>
       </aside>
     </>

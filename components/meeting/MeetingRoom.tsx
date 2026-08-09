@@ -537,6 +537,7 @@ export default function MeetingRoom({
       <ActionItemSidebar
         open={actionItemsOpen}
         isLoading={liveActionItems.isLoading}
+        items={liveActionItems.actionItems}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}
       />
