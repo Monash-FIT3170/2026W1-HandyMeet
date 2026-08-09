@@ -26,7 +26,7 @@
               "sparse": false,
               "ragged": false,
               "name": "input_layer",
-              "batch_input_shape": [null, 126]
+              "batch_input_shape": [null, 172]
             }
           },
           {
@@ -42,8 +42,8 @@
                 },
                 "registered_name": null
               },
-              "units": 256,
-              "activation": "linear",
+              "units": 512,
+              "activation": "relu",
               "use_bias": true,
               "kernel_initializer": {
                 "module": "keras.initializers",
@@ -63,73 +63,6 @@
               "bias_regularizer": null,
               "kernel_constraint": null,
               "bias_constraint": null
-            }
-          },
-          {
-            "class_name": "BatchNormalization",
-            "config": {
-              "name": "batch_normalization",
-              "trainable": true,
-              "dtype": {
-                "module": "keras",
-                "class_name": "DTypePolicy",
-                "config": {
-                  "name": "float32"
-                },
-                "registered_name": null
-              },
-              "axis": -1,
-              "momentum": 0.99,
-              "epsilon": 0.001,
-              "center": true,
-              "scale": true,
-              "beta_initializer": {
-                "module": "keras.initializers",
-                "class_name": "Zeros",
-                "config": {},
-                "registered_name": null
-              },
-              "gamma_initializer": {
-                "module": "keras.initializers",
-                "class_name": "Ones",
-                "config": {},
-                "registered_name": null
-              },
-              "moving_mean_initializer": {
-                "module": "keras.initializers",
-                "class_name": "Zeros",
-                "config": {},
-                "registered_name": null
-              },
-              "moving_variance_initializer": {
-                "module": "keras.initializers",
-                "class_name": "Ones",
-                "config": {},
-                "registered_name": null
-              },
-              "beta_regularizer": null,
-              "gamma_regularizer": null,
-              "beta_constraint": null,
-              "gamma_constraint": null,
-              "synchronized": false
-            }
-          },
-          {
-            "class_name": "ReLU",
-            "config": {
-              "name": "re_lu",
-              "trainable": true,
-              "dtype": {
-                "module": "keras",
-                "class_name": "DTypePolicy",
-                "config": {
-                  "name": "float32"
-                },
-                "registered_name": null
-              },
-              "max_value": null,
-              "negative_slope": 0.0,
-              "threshold": 0.0
             }
           },
           {
@@ -163,7 +96,7 @@
                 },
                 "registered_name": null
               },
-              "units": 128,
+              "units": 256,
               "activation": "relu",
               "use_bias": true,
               "kernel_initializer": {
@@ -217,7 +150,7 @@
                 },
                 "registered_name": null
               },
-              "units": 64,
+              "units": 128,
               "activation": "relu",
               "use_bias": true,
               "kernel_initializer": {
@@ -271,7 +204,7 @@
                 },
                 "registered_name": null
               },
-              "units": 45,
+              "units": 44,
               "activation": "softmax",
               "use_bias": true,
               "kernel_initializer": {
@@ -295,7 +228,7 @@
             }
           }
         ],
-        "build_input_shape": [null, 126]
+        "build_input_shape": [null, 172]
       }
     },
     "training_config": {
@@ -307,11 +240,11 @@
       "steps_per_execution": 1,
       "jit_compile": false,
       "optimizer_config": {
-        "class_name": "Adam",
+        "class_name": "AdamW",
         "config": {
-          "name": "adam",
-          "learning_rate": 0.0010000000474974513,
-          "weight_decay": null,
+          "name": "adamw",
+          "learning_rate": 9.999999747378752e-6,
+          "weight_decay": 0.0001,
           "clipnorm": null,
           "global_clipnorm": null,
           "clipvalue": null,
@@ -333,63 +266,43 @@
       "paths": ["group1-shard1of1.bin"],
       "weights": [
         {
-          "name": "batch_normalization/gamma",
-          "shape": [256],
-          "dtype": "float32"
-        },
-        {
-          "name": "batch_normalization/beta",
-          "shape": [256],
-          "dtype": "float32"
-        },
-        {
-          "name": "batch_normalization/moving_mean",
-          "shape": [256],
-          "dtype": "float32"
-        },
-        {
-          "name": "batch_normalization/moving_variance",
-          "shape": [256],
-          "dtype": "float32"
-        },
-        {
           "name": "dense/kernel",
-          "shape": [126, 256],
+          "shape": [172, 512],
           "dtype": "float32"
         },
         {
           "name": "dense/bias",
-          "shape": [256],
+          "shape": [512],
           "dtype": "float32"
         },
         {
           "name": "dense_1/kernel",
-          "shape": [256, 128],
+          "shape": [512, 256],
           "dtype": "float32"
         },
         {
           "name": "dense_1/bias",
-          "shape": [128],
+          "shape": [256],
           "dtype": "float32"
         },
         {
           "name": "dense_2/kernel",
-          "shape": [128, 64],
+          "shape": [256, 128],
           "dtype": "float32"
         },
         {
           "name": "dense_2/bias",
-          "shape": [64],
+          "shape": [128],
           "dtype": "float32"
         },
         {
           "name": "dense_3/kernel",
-          "shape": [64, 45],
+          "shape": [128, 44],
           "dtype": "float32"
         },
         {
           "name": "dense_3/bias",
-          "shape": [45],
+          "shape": [44],
           "dtype": "float32"
         }
       ]
