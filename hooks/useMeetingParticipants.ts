@@ -1,6 +1,7 @@
 'use client';
 
 import { useParticipants } from '@livekit/components-react';
+import { useMemo } from 'react';
 
 export type ParticipantOption = {
   id: string;
@@ -10,10 +11,17 @@ export type ParticipantOption = {
 export function useMeetingParticipants(): ParticipantOption[] {
   const participants = useParticipants();
 
-  return participants
-    .filter((p) => !p.identity.toLowerCase().startsWith('agent-'))
-    .map((p) => ({
-      id: p.identity,
-      name: p.identity,
-    }));
+  return useMemo(
+    () =>
+      participants
+        .filter(
+          (participant) =>
+            !participant.identity.toLowerCase().startsWith('agent-'),
+        )
+        .map((participant) => ({
+          id: participant.identity,
+          name: participant.name ?? participant.identity,
+        })),
+    [participants],
+  );
 }
