@@ -32,6 +32,7 @@ import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import LeaveConfirmDialog from '@/components/LeaveConfirmDialog';
+import ActionItemSidebar from '@/components/action-items/ActionItemSidebar';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
@@ -111,6 +112,7 @@ export default function MeetingRoom({
   const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [insightsEnabled, setInsightsEnabled] = useState(false);
+  const [actionItemsOpen, setActionItemsOpen] = useState(true);
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
@@ -531,6 +533,13 @@ export default function MeetingRoom({
 
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
       </LayoutContextProvider>
+
+      <ActionItemSidebar
+        open={actionItemsOpen}
+        isLoading={liveActionItems.isLoading}
+        onCollapse={() => setActionItemsOpen(false)}
+        onExpand={() => setActionItemsOpen(true)}
+      />
 
       <RoomAudioRenderer />
       <StartAudio label="Click to allow audio playback" />
