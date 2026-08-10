@@ -538,6 +538,7 @@ export default function MeetingRoom({
         open={actionItemsOpen}
         chatOpen={widgetState.showChat}
         isLoading={liveActionItems.isLoading}
+        error={liveActionItems.error}
         items={liveActionItems.actionItems}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}
