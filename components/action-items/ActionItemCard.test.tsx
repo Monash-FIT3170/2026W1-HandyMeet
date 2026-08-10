@@ -33,3 +33,21 @@ test('renders a due date only when one is supplied', () => {
   assert.match(withDueDate, /2026-08-14/);
   assert.doesNotMatch(withoutDueDate, />Due</);
 });
+
+test('renders action controls for a suggested item', () => {
+  const markup = renderToStaticMarkup(<ActionItemCard item={actionItem} />);
+
+  assert.match(markup, />Accept</);
+  assert.match(markup, />Edit</);
+  assert.match(markup, />Dismiss</);
+});
+
+test('keeps action controls off accepted items', () => {
+  const markup = renderToStaticMarkup(
+    <ActionItemCard item={{ ...actionItem, status: 'accepted' }} />,
+  );
+
+  assert.doesNotMatch(markup, />Accept</);
+  assert.doesNotMatch(markup, />Edit</);
+  assert.doesNotMatch(markup, />Dismiss</);
+});
