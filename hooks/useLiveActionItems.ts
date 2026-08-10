@@ -141,8 +141,43 @@ export function useLiveActionItems({
       }
     };
 
+    // On meeting end, beacon whatever transcript is still unsent (including any
+    // unfinished trailing line). sendBeacon survives a hard unload tab close
+    // or refresh where a normal fetch and this effect's cleanup never run.
+    const flushFinal = () => {
+      const cleaned = cleanTranscriptLines(transcriptLinesRef.current);
+      if (cleaned.length === 0) return;
+
+      const startIndex =
+        sentLineCountRef.current > 0 &&
+        cleaned[sentLineCountRef.current - 1] !== sentTrailingLineRef.current
+          ? sentLineCountRef.current - 1
+          : sentLineCountRef.current;
+
+      const delta = cleaned.slice(startIndex);
+      if (delta.length === 0) return;
+
+      const knownActionItems = actionItemsRef.current.map(
+        ({ task, owner, dueDate }) => ({ task, owner, dueDate }),
+      );
+      const body = JSON.stringify({
+        transcript: delta.join('\n'),
+        knownActionItems,
+      });
+      navigator.sendBeacon(
+        '/api/live-insights',
+        new Blob([body], { type: 'application/json' }),
+      );
+    };
+
     const intervalId = setInterval(tick, POLL_INTERVAL_MS);
-    return () => clearInterval(intervalId);
+    window.addEventListener('pagehide', flushFinal);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('pagehide', flushFinal);
+      flushFinal();
+    };
   }, [enabled]);
 
   function updateItem(id: string, patch: Partial<LiveActionItem>) {
