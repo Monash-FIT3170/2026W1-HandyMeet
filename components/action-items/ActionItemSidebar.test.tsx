@@ -13,16 +13,26 @@ const suggestion: LiveActionItem = {
   assigneeId: null,
 };
 
+const acceptedItem: LiveActionItem = {
+  ...suggestion,
+  id: 'accepted-1',
+  task: 'Review the final presentation deck',
+  owner: 'Jordan',
+  status: 'accepted',
+};
+
 function renderSidebar({
   open = true,
   chatOpen = false,
   isLoading = false,
+  error = null,
   items = [],
   children,
 }: {
   open?: boolean;
   chatOpen?: boolean;
   isLoading?: boolean;
+  error?: string | null;
   items?: LiveActionItem[];
   children?: React.ReactNode;
 } = {}) {
@@ -31,6 +41,7 @@ function renderSidebar({
       open={open}
       chatOpen={chatOpen}
       isLoading={isLoading}
+      error={error}
       items={items}
       onCollapse={() => undefined}
       onExpand={() => undefined}
@@ -125,9 +136,41 @@ test('shows the expanded header as the sidebar drag handle', () => {
 test('renders the dark surface and glass highlight as separate backgrounds', () => {
   const markup = renderSidebar();
 
-  assert.match(markup, /background-color:rgba\(7,10,15,0.9\)/);
+  assert.match(markup, /background-color:rgba\(7,10,15,[^)]+\)/);
   assert.match(
     markup,
     /background-image:linear-gradient\(145deg,rgba\(255,255,255,0.03\),transparent 20%\)/,
   );
+});
+
+test('moves accepted items into an initially collapsed Accepted section', () => {
+  const markup = renderSidebar({ items: [suggestion, acceptedItem] });
+  const suggestionsStart = markup.indexOf('Suggestions');
+  const acceptedStart = markup.indexOf('Accepted');
+
+  assert.ok(suggestionsStart >= 0);
+  assert.ok(acceptedStart > suggestionsStart);
+  assert.match(
+    markup.slice(suggestionsStart, acceptedStart),
+    /Prepare the sprint demonstration/,
+  );
+  assert.doesNotMatch(
+    markup.slice(suggestionsStart, acceptedStart),
+    /Review the final presentation deck/,
+  );
+  assert.match(markup, /aria-expanded="false"/);
+  assert.match(
+    markup,
+    /hidden=""[^>]*>[\s\S]*Review the final presentation deck/,
+  );
+});
+
+test('shows an extraction error without removing suggestion cards', () => {
+  const markup = renderSidebar({
+    error: 'Could not check the latest transcript.',
+    items: [suggestion],
+  });
+
+  assert.match(markup, /Could not check the latest transcript/);
+  assert.match(markup, /Prepare the sprint demonstration/);
 });

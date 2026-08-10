@@ -44,6 +44,7 @@ type ActionItemSidebarProps = {
   open: boolean;
   chatOpen: boolean;
   isLoading: boolean;
+  error: string | null;
   items: LiveActionItem[];
   onCollapse: () => void;
   onExpand: () => void;
@@ -54,6 +55,7 @@ export default function ActionItemSidebar({
   open,
   chatOpen,
   isLoading,
+  error,
   items,
   onCollapse,
   onExpand,
@@ -62,7 +64,9 @@ export default function ActionItemSidebar({
   const sidebarRef = useRef<HTMLElement>(null);
   const dragStateRef = useRef<DragState | null>(null);
   const [dragOffset, setDragOffset] = useState<Point>(DEFAULT_DRAG_OFFSET);
+  const [acceptedOpen, setAcceptedOpen] = useState(false);
   const suggestions = items.filter((item) => item.status === 'suggested');
+  const acceptedItems = items.filter((item) => item.status === 'accepted');
   const right = chatOpen ? 'calc(clamp(200px, 55ch, 60ch) + 1rem)' : '1rem';
 
   useEffect(() => {
@@ -204,30 +208,73 @@ export default function ActionItemSidebar({
           </button>
         </header>
 
+        {error && (
+          <div
+            className="mx-4 mt-3 rounded-lg border border-red-300/20 bg-red-400/10 px-3 py-2 text-xs text-red-200"
+            role="status"
+          >
+            {error}
+          </div>
+        )}
+
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {children ??
-            (suggestions.length > 0 ? (
-              <section aria-labelledby="suggested-action-items">
-                <div className="text-neutral-400 mb-3 flex items-center justify-between text-xs">
-                  <h3
-                    id="suggested-action-items"
-                    className="font-bold uppercase tracking-wider"
+          {children ?? (
+            <div className="flex flex-col gap-4">
+              {suggestions.length > 0 ? (
+                <section aria-labelledby="suggested-action-items">
+                  <div className="text-neutral-400 mb-3 flex items-center justify-between text-xs">
+                    <h3
+                      id="suggested-action-items"
+                      className="font-bold uppercase tracking-wider"
+                    >
+                      Suggestions
+                    </h3>
+                    <span>{suggestions.length}</span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {suggestions.map((item) => (
+                      <ActionItemCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              ) : (
+                <div className="text-neutral-400 flex min-h-36 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] text-center">
+                  <p className="text-sm">No new action items yet</p>
+                </div>
+              )}
+
+              {acceptedItems.length > 0 && (
+                <section className="border-t border-white/10 pt-3">
+                  <button
+                    type="button"
+                    className="text-neutral-300 hover:text-neutral-100 flex w-full items-center justify-between rounded-lg px-1 py-2 text-xs"
+                    onClick={() => setAcceptedOpen((current) => !current)}
+                    aria-expanded={acceptedOpen}
+                    aria-controls="accepted-action-items"
                   >
-                    Suggestions
-                  </h3>
-                  <span>{suggestions.length}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {suggestions.map((item) => (
-                    <ActionItemCard key={item.id} item={item} />
-                  ))}
-                </div>
-              </section>
-            ) : (
-              <div className="text-neutral-400 flex h-full min-h-36 items-center justify-center rounded-xl border border-dashed border-white/15 bg-white/[0.02] text-center">
-                <p className="text-sm">No new action items yet</p>
-              </div>
-            ))}
+                    <span className="flex items-center gap-2 font-bold uppercase tracking-wider">
+                      Accepted
+                      <span className="text-neutral-400 font-normal">
+                        {acceptedItems.length}
+                      </span>
+                    </span>
+                    <span aria-hidden="true" className="text-base">
+                      {acceptedOpen ? '^' : 'v'}
+                    </span>
+                  </button>
+                  <div
+                    id="accepted-action-items"
+                    className="mt-2 flex flex-col gap-2"
+                    hidden={!acceptedOpen}
+                  >
+                    {acceptedItems.map((item) => (
+                      <ActionItemCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          )}
         </div>
       </aside>
     </>
