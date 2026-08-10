@@ -33,6 +33,10 @@ import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import LeaveConfirmDialog from '@/components/LeaveConfirmDialog';
 import ActionItemSidebar from '@/components/action-items/ActionItemSidebar';
+import {
+  EMPTY_UNREAD_SUGGESTION_STATE,
+  getNextUnreadSuggestionState,
+} from '@/helpers/actionItems';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
@@ -113,6 +117,9 @@ export default function MeetingRoom({
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [insightsEnabled, setInsightsEnabled] = useState(false);
   const [actionItemsOpen, setActionItemsOpen] = useState(true);
+  const [unreadSuggestions, setUnreadSuggestions] = useState(
+    EMPTY_UNREAD_SUGGESTION_STATE,
+  );
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
@@ -233,6 +240,16 @@ export default function MeetingRoom({
     transcriptLines,
     enabled: insightsEnabled,
   });
+
+  useEffect(() => {
+    setUnreadSuggestions((current) =>
+      getNextUnreadSuggestionState(
+        current,
+        liveActionItems.actionItems,
+        actionItemsOpen,
+      ),
+    );
+  }, [actionItemsOpen, liveActionItems.actionItems]);
   void liveActionItems;
   const confirmLeave = useCallback(() => {
     setShowLeaveConfirm(false);
@@ -539,6 +556,7 @@ export default function MeetingRoom({
         chatOpen={widgetState.showChat}
         isLoading={liveActionItems.isLoading}
         error={liveActionItems.error}
+        unreadCount={unreadSuggestions.count}
         items={liveActionItems.actionItems}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}

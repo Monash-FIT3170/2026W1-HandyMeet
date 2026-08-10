@@ -45,6 +45,7 @@ type ActionItemSidebarProps = {
   chatOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  unreadCount: number;
   items: LiveActionItem[];
   onCollapse: () => void;
   onExpand: () => void;
@@ -56,6 +57,7 @@ export default function ActionItemSidebar({
   chatOpen,
   isLoading,
   error,
+  unreadCount,
   items,
   onCollapse,
   onExpand,
@@ -68,6 +70,10 @@ export default function ActionItemSidebar({
   const suggestions = items.filter((item) => item.status === 'suggested');
   const acceptedItems = items.filter((item) => item.status === 'accepted');
   const right = chatOpen ? 'calc(clamp(200px, 55ch, 60ch) + 1rem)' : '1rem';
+  const launcherLabel =
+    unreadCount > 0
+      ? `Open action items, ${unreadCount} unread suggestion${unreadCount === 1 ? '' : 's'}`
+      : 'Open action items';
 
   useEffect(() => {
     const resetPosition = () => setDragOffset(DEFAULT_DRAG_OFFSET);
@@ -137,12 +143,21 @@ export default function ActionItemSidebar({
       {!open && (
         <button
           type="button"
-          className={`${SOFT_GLASS_SURFACE} text-neutral-100 fixed top-4 z-50 rounded-xl px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.10)] transition-[right] duration-200`}
+          className={`${SOFT_GLASS_SURFACE} text-neutral-100 fixed top-4 z-50 flex items-center gap-2 rounded-xl px-3 py-2 shadow-[0_12px_30px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.10)] transition-[right] duration-200`}
           style={{ ...SOFT_GLASS_BACKGROUND, right }}
           onClick={onExpand}
-          aria-label="Open action items"
+          aria-label={launcherLabel}
         >
           Action items
+          {unreadCount > 0 && (
+            <span
+              className="bg-primary-500 text-neutral-950 grid min-w-5 place-items-center rounded-full px-1.5 text-xs font-bold"
+              data-unread-count={unreadCount}
+              aria-hidden="true"
+            >
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
         </button>
       )}
 

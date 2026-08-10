@@ -26,6 +26,7 @@ function renderSidebar({
   chatOpen = false,
   isLoading = false,
   error = null,
+  unreadCount = 0,
   items = [],
   children,
 }: {
@@ -33,6 +34,7 @@ function renderSidebar({
   chatOpen?: boolean;
   isLoading?: boolean;
   error?: string | null;
+  unreadCount?: number;
   items?: LiveActionItem[];
   children?: React.ReactNode;
 } = {}) {
@@ -42,6 +44,7 @@ function renderSidebar({
       chatOpen={chatOpen}
       isLoading={isLoading}
       error={error}
+      unreadCount={unreadCount}
       items={items}
       onCollapse={() => undefined}
       onExpand={() => undefined}
@@ -104,6 +107,13 @@ test('hides the sidebar from assistive technology when collapsed', () => {
   assert.match(markup, /aria-hidden="true"/);
   assert.match(markup, /data-open="false"/);
   assert.match(markup, /aria-label="Open action items"/);
+});
+
+test('shows the unread suggestion count on the collapsed launcher', () => {
+  const markup = renderSidebar({ open: false, unreadCount: 3 });
+
+  assert.match(markup, /aria-label="Open action items, 3 unread suggestions"/);
+  assert.match(markup, /data-unread-count="3"[^>]*>3</);
 });
 
 test('moves to the left of LiveKit Chat when Chat is open', () => {
