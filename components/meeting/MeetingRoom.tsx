@@ -557,7 +557,17 @@ export default function MeetingRoom({
         isLoading={liveActionItems.isLoading}
         error={liveActionItems.error}
         unreadCount={unreadSuggestions.count}
-        items={liveActionItems.actionItems}
+        items={[
+          {
+            id: 'demo-action-item',
+            task: 'Sidebar Demo',
+            owner: 'Demo Man/Woman',
+            dueDate: '2026-08-14',
+            status: 'suggested',
+            assigneeId: null,
+          },
+          ...liveActionItems.actionItems,
+        ]}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}
       />
