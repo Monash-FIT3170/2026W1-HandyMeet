@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { LiveActionItem } from '@/hooks/useLiveActionItems';
 import ActionItemCard from './ActionItemCard';
+import type { ActionItemActionHandlers } from './ActionItemCard';
 
 const SOFT_GLASS_SURFACE =
   'border border-white/15 backdrop-blur-xl backdrop-saturate-125';
@@ -40,7 +41,7 @@ export function clampDragOffset(
   };
 }
 
-type ActionItemSidebarProps = {
+type ActionItemSidebarProps = ActionItemActionHandlers & {
   open: boolean;
   chatOpen: boolean;
   isLoading: boolean;
@@ -61,6 +62,9 @@ export default function ActionItemSidebar({
   items,
   onCollapse,
   onExpand,
+  onAccept,
+  onEdit,
+  onDismiss,
   children,
 }: ActionItemSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
@@ -248,7 +252,13 @@ export default function ActionItemSidebar({
                   </div>
                   <div className="flex flex-col gap-2">
                     {suggestions.map((item) => (
-                      <ActionItemCard key={item.id} item={item} />
+                      <ActionItemCard
+                        key={item.id}
+                        item={item}
+                        onAccept={onAccept}
+                        onEdit={onEdit}
+                        onDismiss={onDismiss}
+                      />
                     ))}
                   </div>
                 </section>
