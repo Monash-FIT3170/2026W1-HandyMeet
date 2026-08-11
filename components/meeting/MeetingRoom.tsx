@@ -36,6 +36,7 @@ import ActionItemSidebar from '@/components/action-items/ActionItemSidebar';
 import {
   EMPTY_UNREAD_SUGGESTION_STATE,
   getNextUnreadSuggestionState,
+  shouldAutoOpenActionItems,
 } from '@/helpers/actionItems';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
@@ -116,10 +117,11 @@ export default function MeetingRoom({
   const [overlayEnabled, setOverlayEnabled] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [insightsEnabled, setInsightsEnabled] = useState(false);
-  const [actionItemsOpen, setActionItemsOpen] = useState(true);
+  const [actionItemsOpen, setActionItemsOpen] = useState(false);
   const [unreadSuggestions, setUnreadSuggestions] = useState(
     EMPTY_UNREAD_SUGGESTION_STATE,
   );
+  const hasAutoOpenedActionItemsRef = useRef(false);
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
@@ -240,16 +242,28 @@ export default function MeetingRoom({
     transcriptLines,
     enabled: insightsEnabled,
   });
+  const autoOpenActionItems = shouldAutoOpenActionItems(
+    hasAutoOpenedActionItemsRef.current,
+    liveActionItems.actionItems.length,
+  );
+  const actionItemSidebarOpen = actionItemsOpen || autoOpenActionItems;
+
+  useEffect(() => {
+    if (!autoOpenActionItems) return;
+
+    hasAutoOpenedActionItemsRef.current = true;
+    setActionItemsOpen(true);
+  }, [autoOpenActionItems]);
 
   useEffect(() => {
     setUnreadSuggestions((current) =>
       getNextUnreadSuggestionState(
         current,
         liveActionItems.actionItems,
-        actionItemsOpen,
+        actionItemSidebarOpen,
       ),
     );
-  }, [actionItemsOpen, liveActionItems.actionItems]);
+  }, [actionItemSidebarOpen, liveActionItems.actionItems]);
   void liveActionItems;
   const confirmLeave = useCallback(() => {
     setShowLeaveConfirm(false);
@@ -552,22 +566,12 @@ export default function MeetingRoom({
       </LayoutContextProvider>
 
       <ActionItemSidebar
-        open={actionItemsOpen}
+        open={actionItemSidebarOpen}
         chatOpen={widgetState.showChat}
         isLoading={liveActionItems.isLoading}
         error={liveActionItems.error}
         unreadCount={unreadSuggestions.count}
-        items={[
-          {
-            id: 'demo-action-item',
-            task: 'Sidebar Demo',
-            owner: 'Demo Man/Woman',
-            dueDate: '2026-08-14',
-            status: 'suggested',
-            assigneeId: null,
-          },
-          ...liveActionItems.actionItems,
-        ]}
+        items={liveActionItems.actionItems}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}
       />
