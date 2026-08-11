@@ -10,6 +10,13 @@ export const EMPTY_UNREAD_SUGGESTION_STATE: UnreadSuggestionState = {
   count: 0,
 };
 
+export function shouldAutoOpenActionItems(
+  hasAutoOpened: boolean,
+  itemCount: number,
+): boolean {
+  return !hasAutoOpened && itemCount > 0;
+}
+
 export function getNextUnreadSuggestionState(
   current: UnreadSuggestionState,
   items: LiveActionItem[],
