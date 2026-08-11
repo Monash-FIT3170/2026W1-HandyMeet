@@ -4,6 +4,7 @@ import type { LiveActionItem } from '@/hooks/useLiveActionItems';
 import {
   EMPTY_UNREAD_SUGGESTION_STATE,
   getNextUnreadSuggestionState,
+  shouldAutoOpenActionItems,
 } from './actionItems';
 
 function makeItem(
@@ -61,4 +62,10 @@ test('clears unread suggestions when the sidebar opens', () => {
 
   assert.equal(collapsedUpdate.count, 2);
   assert.equal(openedUpdate.count, 0);
+});
+
+test('auto-opens only when the first action item arrives', () => {
+  assert.equal(shouldAutoOpenActionItems(false, 0), false);
+  assert.equal(shouldAutoOpenActionItems(false, 1), true);
+  assert.equal(shouldAutoOpenActionItems(true, 2), false);
 });
