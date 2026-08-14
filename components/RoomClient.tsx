@@ -11,6 +11,7 @@ import {
   type CaptionSettings,
 } from '@/components/TranscriptionSettings';
 import GestureReactionsBanner from './GestureReactionsBanner';
+import Whiteboard from '@/components/Whiteboard';
 
 export default function RoomClient({
   roomName,
@@ -24,6 +25,7 @@ export default function RoomClient({
   const [captionSettings, setCaptionSettings] = useState<CaptionSettings>(
     defaultCaptionSettings,
   );
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -79,8 +81,15 @@ export default function RoomClient({
         <MeetingRoom
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
+          whiteboardOpen={whiteboardOpen}
+          onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
         />
         <Captions settings={captionSettings} />
+
+        <Whiteboard
+          isOpen={whiteboardOpen}
+          onClose={() => setWhiteboardOpen(false)}
+        />
       </LiveKitRoom>
     </main>
   );
