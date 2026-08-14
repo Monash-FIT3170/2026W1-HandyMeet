@@ -90,12 +90,16 @@ type MeetingRoomProps = {
   captionSettings: CaptionSettings;
   onCaptionSettingsChange: (s: CaptionSettings) => void;
   onLeave: (transcriptLines: string[]) => void;
+  whiteboardOpen: boolean;
+  onToggleWhiteboard: () => void;
 };
 
 export default function MeetingRoom({
   captionSettings,
   onCaptionSettingsChange,
   onLeave,
+  whiteboardOpen,
+  onToggleWhiteboard,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
@@ -379,6 +383,31 @@ export default function MeetingRoom({
                   Captions
                 </button>
               </div>
+
+              {/* Whiteboard */}
+              <button
+                className="lk-button"
+                aria-pressed={whiteboardOpen}
+                onClick={onToggleWhiteboard}
+                title="Whiteboard"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.75}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect width="18" height="18" x="3" y="3" rx="2" />
+                  <path d="M3 9h18" />
+                  <path d="M9 21V9" />
+                </svg>
+                Whiteboard
+              </button>
 
               {/* Gestures */}
               <HandTrackingButton
