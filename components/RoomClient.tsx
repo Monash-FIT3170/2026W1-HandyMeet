@@ -12,6 +12,7 @@ import {
   type CaptionSettings,
 } from '@/components/TranscriptionSettings';
 import GestureReactionsBanner from './GestureReactionsBanner';
+import Whiteboard from '@/components/Whiteboard';
 
 export default function RoomClient({
   roomName,
@@ -28,6 +29,7 @@ export default function RoomClient({
   const [callPhase, setCallPhase] = useState<'active' | 'ended'>('active');
   const [transcriptSnapshot, setTranscriptSnapshot] = useState<string[]>([]);
   const isLeavingRef = useRef(false);
+  const [whiteboardOpen, setWhiteboardOpen] = useState(false);
   const router = useRouter();
 
   const handleLeave = useCallback((transcriptLines: string[]) => {
@@ -106,8 +108,15 @@ export default function RoomClient({
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
           onLeave={handleLeave}
+          whiteboardOpen={whiteboardOpen}
+          onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
         />
         <Captions settings={captionSettings} />
+
+        <Whiteboard
+          isOpen={whiteboardOpen}
+          onClose={() => setWhiteboardOpen(false)}
+        />
       </LiveKitRoom>
     </main>
   );
