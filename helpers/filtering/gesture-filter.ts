@@ -33,6 +33,11 @@ export async function processGesture(
     if (currentGesture === Gesture.EndCall) {
       if (confirm('Are you sure you want to end the call?')) {
         disconnect?.();
+        window.dispatchEvent(
+          new CustomEvent('handymeet:gesture-action', {
+            detail: { action: Gesture.EndCall },
+          }),
+        );
       }
     } else {
       await handleAction(room, currentGesture as Gesture);
