@@ -27,7 +27,7 @@ CSV_PATH = (
 )
 MODEL_PATH = ROOT_DIR / "model.h5"
 LABELS_PATH = ROOT_DIR / "model_labels.json"
-EPOCHS = 200
+EPOCHS = 250
 BATCH_SIZE = 64
 
 
