@@ -5,6 +5,7 @@ import type { PointerEvent as ReactPointerEvent, ReactNode } from 'react';
 import type { LiveActionItem } from '@/hooks/useLiveActionItems';
 import ActionItemCard from './ActionItemCard';
 import type { ActionItemActionHandlers } from './ActionItemCard';
+import { ParticipantOption } from '@/hooks/useMeetingParticipants';
 
 const SOFT_GLASS_SURFACE =
   'border border-white/15 backdrop-blur-xl backdrop-saturate-125';
@@ -51,6 +52,7 @@ type ActionItemSidebarProps = ActionItemActionHandlers & {
   onCollapse: () => void;
   onExpand: () => void;
   children?: ReactNode;
+  participants?: ParticipantOption[];
 };
 
 export default function ActionItemSidebar({
@@ -65,6 +67,8 @@ export default function ActionItemSidebar({
   onAccept,
   onEdit,
   onDismiss,
+  onAssign,
+  participants,
   children,
 }: ActionItemSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
@@ -258,6 +262,8 @@ export default function ActionItemSidebar({
                         onAccept={onAccept}
                         onEdit={onEdit}
                         onDismiss={onDismiss}
+                        participants={participants}
+                        onAssign={onAssign}
                       />
                     ))}
                   </div>

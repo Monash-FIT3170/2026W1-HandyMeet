@@ -42,6 +42,7 @@ import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
+import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -274,6 +275,13 @@ export default function MeetingRoom({
     setShowLeaveConfirm(false);
   }, []);
 
+  const handleSummaryClose = useCallback(() => {
+    setShowTranscriptSummary(false);
+    router.push('/');
+  }, [router]);
+
+  const participants = useMeetingParticipants();
+
   return (
     <div className="lk-video-conference">
       <LayoutContextProvider
@@ -496,6 +504,14 @@ export default function MeetingRoom({
               </button>
             </div>
 
+            <button
+              className="lk-button"
+              onClick={liveActionItems.addTestItem}
+              title="Add test action item"
+            >
+              + Test item
+            </button>
+
             {/* Right  Leave */}
             <div
               style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}
@@ -574,6 +590,13 @@ export default function MeetingRoom({
         items={liveActionItems.actionItems}
         onCollapse={() => setActionItemsOpen(false)}
         onExpand={() => setActionItemsOpen(true)}
+        onAccept={liveActionItems.acceptItem}
+        onEdit={(id, newTask) =>
+          liveActionItems.editItem(id, { task: newTask })
+        }
+        onDismiss={liveActionItems.dismissItem}
+        onAssign={liveActionItems.assignUser}
+        participants={participants}
       />
 
       <RoomAudioRenderer />
