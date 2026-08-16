@@ -1,21 +1,46 @@
 import type { LiveActionItem } from '@/hooks/useLiveActionItems';
+import { ParticipantOption } from '@/hooks/useMeetingParticipants';
+import AssigneeDropdown from '../AssigneeDropdown';
+import { useState } from 'react';
 
 export type ActionItemActionHandlers = {
   onAccept?: (itemId: string) => void;
-  onEdit?: (itemId: string) => void;
+  onEdit?: (itemId: string, newTask: string) => void;
   onDismiss?: (itemId: string) => void;
+  onAssign?: (itemID: string, assigneeID: string | null) => void;
 };
 
 type ActionItemCardProps = ActionItemActionHandlers & {
   item: LiveActionItem;
+  participants?: ParticipantOption[];
 };
 
 export default function ActionItemCard({
   item,
+  participants = [],
   onAccept,
   onEdit,
   onDismiss,
+  onAssign,
 }: ActionItemCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draftTask, setDraftTask] = useState(item.task);
+
+  function commitEdit() {
+    const trimmed = draftTask.trim();
+    if (trimmed && trimmed !== item.task) {
+      onEdit?.(item.id, trimmed);
+    } else {
+      setDraftTask(item.task); // reset if empty or unchanged
+    }
+    setIsEditing(false);
+  }
+
+  function cancelEdit() {
+    setDraftTask(item.task);
+    setIsEditing(false);
+  }
+
   return (
     <article className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
       <div>
@@ -31,13 +56,46 @@ export default function ActionItemCard({
         <p className="text-neutral-400 text-[0.625rem] font-bold uppercase">
           Task
         </p>
-        <p className="text-neutral-100 text-sm leading-5">{item.task}</p>
+        {isEditing ? (
+          <input
+            type="text"
+            value={draftTask}
+            autoFocus
+            onChange={(e) => setDraftTask(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitEdit();
+              if (e.key === 'Escape') cancelEdit();
+            }}
+            onBlur={commitEdit}
+            className="text-neutral-100 text-sm leading-5 w-full bg-white/10 border border-primary-500/40 rounded-md px-2 py-1 outline-none focus:border-primary-400"
+          />
+        ) : (
+          <p
+            className="text-neutral-100 text-sm leading-5 cursor-text"
+            onClick={() => onEdit && setIsEditing(true)}
+          >
+            {item.task}
+          </p>
+        )}
       </div>
 
       {item.dueDate && (
         <p className="text-neutral-400 text-xs">
           Due <time dateTime={item.dueDate}>{item.dueDate}</time>
         </p>
+      )}
+
+      {onAssign && (
+        <div>
+          <p className="text-neutral-400 text-[0.625rem] font-bold uppercase mb-1">
+            Assign to
+          </p>
+          <AssigneeDropdown
+            participants={participants}
+            assigneeId={item.assigneeId}
+            onAssign={(assigneeId) => onAssign(item.id, assigneeId)}
+          />
+        </div>
       )}
 
       {item.status === 'suggested' && (
@@ -52,7 +110,7 @@ export default function ActionItemCard({
           <button
             type="button"
             className="text-neutral-300 hover:text-neutral-100 cursor-pointer rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs font-semibold hover:bg-white/10"
-            onClick={() => onEdit?.(item.id)}
+            onClick={() => setIsEditing(true)}
           >
             Edit
           </button>

@@ -206,6 +206,19 @@ export function useLiveActionItems({
     updateItem(id, { assigneeId });
   }
 
+  function addTestItem() {
+    const testItem: LiveActionItem = {
+      id: crypto.randomUUID(),
+      task: 'Complete task',
+      owner: 'Naveen',
+      dueDate: null,
+      status: 'suggested',
+      assigneeId: null,
+    };
+    actionItemsRef.current = [...actionItemsRef.current, testItem];
+    setActionItems(actionItemsRef.current);
+  }
+
   return {
     actionItems,
     isLoading,
@@ -214,5 +227,6 @@ export function useLiveActionItems({
     dismissItem,
     editItem,
     assignUser,
+    addTestItem, // remove before merging
   };
 }
