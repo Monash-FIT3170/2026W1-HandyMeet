@@ -16,11 +16,15 @@ const JUMP_THRESHOLD = 0.15;
 type UseGestureDrawingOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   enabled: boolean;
+  onStrokeComplete?: (stroke: DrawingStroke) => void;
+  onStrokeUpdate?: (stroke: DrawingStroke) => void;
 };
 
 export function useGestureDrawing({
   videoRef,
   enabled,
+  onStrokeComplete,
+  onStrokeUpdate,
 }: UseGestureDrawingOptions) {
   const landmarkerRef = useRef<HandLandmarker | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -33,14 +37,23 @@ export function useGestureDrawing({
   const [currentGesture, setCurrentGesture] = useState<DrawingGesture | null>(
     null,
   );
-  const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
 
   const currentStrokeRef = useRef<DrawingStroke>([]);
+  const onStrokeCompleteRef = useRef(onStrokeComplete);
+  const onStrokeUpdateRef = useRef(onStrokeUpdate);
   const enabledRef = useRef(enabled);
 
   const positionHistoryRef = useRef<DrawingPoint[]>([]);
   const gestureStabilityRef = useRef<number>(0);
   const lastPositionRef = useRef<DrawingPoint | null>(null);
+
+  useEffect(() => {
+    onStrokeCompleteRef.current = onStrokeComplete;
+  }, [onStrokeComplete]);
+
+  useEffect(() => {
+    onStrokeUpdateRef.current = onStrokeUpdate;
+  }, [onStrokeUpdate]);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -75,11 +88,6 @@ export function useGestureDrawing({
     setCursorPosition(null);
     setIsDrawing(false);
     setCurrentGesture(null);
-  }, []);
-
-  const clearStrokes = useCallback(() => {
-    setStrokes([]);
-    currentStrokeRef.current = [];
   }, []);
 
   useEffect(() => {
@@ -122,7 +130,7 @@ export function useGestureDrawing({
         setCurrentGesture(null);
 
         if (wasDrawing && currentStrokeRef.current.length > 0) {
-          setStrokes((prev) => [...prev, [...currentStrokeRef.current]]);
+          onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
           currentStrokeRef.current = [];
         }
         wasDrawing = false;
@@ -186,6 +194,7 @@ export function useGestureDrawing({
 
             if (!jumped) {
               currentStrokeRef.current.push(smoothedPosition);
+              onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
             }
 
             lastPositionRef.current = smoothedPosition;
@@ -195,7 +204,7 @@ export function useGestureDrawing({
           lastPositionRef.current = null;
 
           if (wasDrawing && currentStrokeRef.current.length > 0) {
-            setStrokes((prev) => [...prev, [...currentStrokeRef.current]]);
+            onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
             currentStrokeRef.current = [];
           }
           wasDrawing = false;
@@ -227,7 +236,5 @@ export function useGestureDrawing({
     isDrawing,
     cursorPosition,
     currentGesture,
-    strokes,
-    clearStrokes,
   };
 }

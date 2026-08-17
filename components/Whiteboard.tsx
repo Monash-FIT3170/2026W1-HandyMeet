@@ -2,10 +2,14 @@
 
 import 'tldraw/tldraw.css';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { DefaultStylePanel, Tldraw } from 'tldraw';
+import { DefaultStylePanel, Tldraw, Editor } from 'tldraw';
 import GestureDrawingOverlay from '@/components/GestureDrawingOverlay';
-import { useGestureDrawing } from '@/hooks/useGestureDrawing';
+import {
+  useGestureDrawing,
+  type DrawingStroke,
+} from '@/hooks/useGestureDrawing';
 import { DrawingGesture } from '@/constants/gestures';
+import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
 
 interface WhiteboardProps {
   isOpen: boolean;
@@ -20,8 +24,10 @@ export default function Whiteboard({
 }: WhiteboardProps) {
   const [gestureDrawingEnabled, setGestureDrawingEnabled] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  const [currentStroke, setCurrentStroke] = useState<DrawingStroke>([]);
   const [cameraAvailable, setCameraAvailable] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<Editor | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -55,14 +61,39 @@ export default function Whiteboard({
     return () => clearInterval(interval);
   }, [localVideoRef, gestureDrawingEnabled]);
 
-  const { isDrawing, cursorPosition, currentGesture, strokes, clearStrokes } =
-    useGestureDrawing({
-      videoRef: localVideoRef,
-      enabled: gestureDrawingEnabled && cameraAvailable,
-    });
+  const handleStrokeComplete = useCallback(
+    (stroke: DrawingStroke) => {
+      if (editorRef.current && stroke.length >= 2) {
+        addStrokeToTldraw(
+          editorRef.current,
+          stroke,
+          containerSize.width,
+          containerSize.height,
+        );
+      }
+      setCurrentStroke([]);
+    },
+    [containerSize.width, containerSize.height],
+  );
+
+  const handleStrokeUpdate = useCallback((stroke: DrawingStroke) => {
+    setCurrentStroke(stroke);
+  }, []);
+
+  const { isDrawing, cursorPosition, currentGesture } = useGestureDrawing({
+    videoRef: localVideoRef,
+    enabled: gestureDrawingEnabled && cameraAvailable,
+    onStrokeComplete: handleStrokeComplete,
+    onStrokeUpdate: handleStrokeUpdate,
+  });
 
   const handleToggleGestureDrawing = useCallback(() => {
     setGestureDrawingEnabled((prev) => !prev);
+    setCurrentStroke([]);
+  }, []);
+
+  const handleEditorMount = useCallback((editor: Editor) => {
+    editorRef.current = editor;
   }, []);
 
   if (!isOpen) return null;
@@ -108,32 +139,23 @@ export default function Whiteboard({
           </button>
 
           {gestureDrawingEnabled && cameraAvailable && (
-            <>
-              <button
-                onClick={clearStrokes}
-                className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
-              >
-                Clear Drawing
-              </button>
-
-              <div className="flex items-center gap-2 text-xs text-neutral-400">
-                {currentGesture === DrawingGesture.Pointing && (
-                  <span className="flex items-center gap-1 text-blue-400">
-                    <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-                    Drawing...
-                  </span>
-                )}
-                {currentGesture === DrawingGesture.Fist && (
-                  <span className="flex items-center gap-1 text-green-400">
-                    <span className="w-2 h-2 bg-green-400 rounded-full" />
-                    Stroke saved
-                  </span>
-                )}
-                {!currentGesture && cursorPosition && (
-                  <span className="text-neutral-500">Point finger to draw</span>
-                )}
-              </div>
-            </>
+            <div className="flex items-center gap-2 text-xs text-neutral-400">
+              {currentGesture === DrawingGesture.Pointing && (
+                <span className="flex items-center gap-1 text-blue-400">
+                  <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+                  Drawing...
+                </span>
+              )}
+              {currentGesture === DrawingGesture.Fist && (
+                <span className="flex items-center gap-1 text-green-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" />
+                  Saved to canvas
+                </span>
+              )}
+              {!currentGesture && cursorPosition && (
+                <span className="text-neutral-500">Point finger to draw</span>
+              )}
+            </div>
           )}
         </div>
 
@@ -158,6 +180,7 @@ export default function Whiteboard({
           }}
         >
           <Tldraw
+            onMount={handleEditorMount}
             components={{
               StylePanel: () => (
                 <div
@@ -178,7 +201,7 @@ export default function Whiteboard({
         {gestureDrawingEnabled && cameraAvailable && (
           <GestureDrawingOverlay
             cursorPosition={cursorPosition}
-            strokes={strokes}
+            strokes={currentStroke.length > 0 ? [currentStroke] : []}
             isDrawing={isDrawing}
             currentGesture={currentGesture}
             width={containerSize.width}
