@@ -9,6 +9,10 @@ import { DrawingGesture } from '@/constants/gestures';
 export type DrawingPoint = { x: number; y: number };
 export type DrawingStroke = DrawingPoint[];
 
+const SMOOTHING_WINDOW = 5;
+const STABILITY_FRAMES_REQUIRED = 4;
+const JUMP_THRESHOLD = 0.15;
+
 type UseGestureDrawingOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
   enabled: boolean;
@@ -33,6 +37,10 @@ export function useGestureDrawing({
 
   const currentStrokeRef = useRef<DrawingStroke>([]);
   const enabledRef = useRef(enabled);
+
+  const positionHistoryRef = useRef<DrawingPoint[]>([]);
+  const gestureStabilityRef = useRef<number>(0);
+  const lastPositionRef = useRef<DrawingPoint | null>(null);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -130,35 +138,76 @@ export function useGestureDrawing({
         return;
       }
 
-      const gesture = detectDrawingGesture(landmarks);
+      const gesture = detectDrawingGesture(landmarks, wasDrawing);
       setCurrentGesture(gesture);
 
       const fingerTip = getIndexFingerTip(landmarks);
 
       if (fingerTip) {
         const mirroredX = 1 - fingerTip.x;
-        const position = { x: mirroredX, y: fingerTip.y };
+        const rawPosition = { x: mirroredX, y: fingerTip.y };
 
-        setCursorPosition(position);
+        positionHistoryRef.current.push(rawPosition);
+        if (positionHistoryRef.current.length > SMOOTHING_WINDOW) {
+          positionHistoryRef.current.shift();
+        }
+
+        const smoothedPosition = {
+          x:
+            positionHistoryRef.current.reduce((sum, p) => sum + p.x, 0) /
+            positionHistoryRef.current.length,
+          y:
+            positionHistoryRef.current.reduce((sum, p) => sum + p.y, 0) /
+            positionHistoryRef.current.length,
+        };
+
+        setCursorPosition(smoothedPosition);
 
         if (gesture === DrawingGesture.Pointing) {
-          if (!wasDrawing) {
-            wasDrawing = true;
-            setIsDrawing(true);
-            currentStrokeRef.current = [];
-          }
+          gestureStabilityRef.current++;
 
-          currentStrokeRef.current.push(position);
+          const isStable =
+            gestureStabilityRef.current >= STABILITY_FRAMES_REQUIRED;
+
+          if (isStable) {
+            const lastPos = lastPositionRef.current;
+            const jumped =
+              lastPos &&
+              Math.hypot(
+                smoothedPosition.x - lastPos.x,
+                smoothedPosition.y - lastPos.y,
+              ) > JUMP_THRESHOLD;
+
+            if (!wasDrawing) {
+              wasDrawing = true;
+              setIsDrawing(true);
+              currentStrokeRef.current = [];
+            }
+
+            if (!jumped) {
+              currentStrokeRef.current.push(smoothedPosition);
+            }
+
+            lastPositionRef.current = smoothedPosition;
+          }
         } else if (gesture === DrawingGesture.Fist) {
+          gestureStabilityRef.current = 0;
+          lastPositionRef.current = null;
+
           if (wasDrawing && currentStrokeRef.current.length > 0) {
             setStrokes((prev) => [...prev, [...currentStrokeRef.current]]);
             currentStrokeRef.current = [];
           }
           wasDrawing = false;
           setIsDrawing(false);
+        } else {
+          gestureStabilityRef.current = 0;
         }
       } else {
         setCursorPosition(null);
+        positionHistoryRef.current = [];
+        gestureStabilityRef.current = 0;
+        lastPositionRef.current = null;
       }
 
       animationFrameRef.current = requestAnimationFrame(detect);
