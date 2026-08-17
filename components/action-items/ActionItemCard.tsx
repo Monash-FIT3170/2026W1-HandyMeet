@@ -4,7 +4,7 @@ import AssigneeDropdown from '../AssigneeDropdown';
 import { useState } from 'react';
 
 export type ActionItemActionHandlers = {
-  onAccept?: (itemId: string) => void;
+  onAccept?: (itemId: string, ownerName?: string) => void;
   onEdit?: (itemId: string, newTask: string) => void;
   onDismiss?: (itemId: string) => void;
   onAssign?: (itemID: string, assigneeID: string | null) => void;
@@ -25,6 +25,11 @@ export default function ActionItemCard({
 }: ActionItemCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTask, setDraftTask] = useState(item.task);
+
+  const assignedParticipant = participants.find(
+    (p) => p.id === item.assigneeId,
+  );
+  const whoLabel = assignedParticipant?.name ?? item.owner ?? 'Unassigned';
 
   function commitEdit() {
     const trimmed = draftTask.trim();
@@ -47,9 +52,7 @@ export default function ActionItemCard({
         <p className="text-neutral-400 text-[0.625rem] font-bold uppercase">
           Who
         </p>
-        <p className="text-primary-200 text-sm font-semibold">
-          {item.owner ?? 'Unassigned'}
-        </p>
+        <p className="text-primary-200 text-sm font-semibold">{whoLabel}</p>
       </div>
 
       <div>
@@ -103,7 +106,7 @@ export default function ActionItemCard({
           <button
             type="button"
             className="bg-primary-500/20 text-primary-200 hover:bg-primary-500/30 flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-xs font-semibold"
-            onClick={() => onAccept?.(item.id)}
+            onClick={() => onAccept?.(item.id, assignedParticipant?.name)}
           >
             Accept
           </button>
