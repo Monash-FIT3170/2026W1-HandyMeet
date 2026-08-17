@@ -2,7 +2,7 @@
 
 import '@livekit/components-styles';
 import { LiveKitRoom } from '@livekit/components-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import MeetingRoom from '@/components/meeting/MeetingRoom';
 import Captions from '@/components/Captions';
@@ -26,6 +26,7 @@ export default function RoomClient({
     defaultCaptionSettings,
   );
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -83,12 +84,16 @@ export default function RoomClient({
           onCaptionSettingsChange={setCaptionSettings}
           whiteboardOpen={whiteboardOpen}
           onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
+          onLocalVideoRef={(video) => {
+            localVideoRef.current = video;
+          }}
         />
         <Captions settings={captionSettings} />
 
         <Whiteboard
           isOpen={whiteboardOpen}
           onClose={() => setWhiteboardOpen(false)}
+          localVideoRef={localVideoRef}
         />
       </LiveKitRoom>
     </main>
