@@ -1,14 +1,210 @@
 'use client';
 
 import 'tldraw/tldraw.css';
-import { DefaultStylePanel, Tldraw } from 'tldraw';
+import { useRoomContext } from '@livekit/components-react';
+import { ConnectionState, RoomEvent, type Participant } from 'livekit-client';
+import { useEffect, useRef, useState } from 'react';
+import {
+  createTLStore,
+  DefaultStylePanel,
+  defaultShapeUtils,
+  Tldraw,
+  type TLStoreEventInfo,
+} from 'tldraw';
+
+const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
+const CHUNK_SIZE = 12_000;
+
+type WhiteboardMessage =
+  | { type: 'request' }
+  | {
+      type: 'snapshot';
+      snapshot: ReturnType<
+        ReturnType<typeof createTLStore>['getStoreSnapshot']
+      >;
+      isOpen: boolean;
+    }
+  | { type: 'diff'; changes: TLStoreEventInfo['changes'] }
+  | { type: 'visibility'; isOpen: boolean };
 
 interface WhiteboardProps {
   isOpen: boolean;
+  onOpen: () => void;
   onClose: () => void;
 }
 
-export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
+export default function Whiteboard({
+  isOpen,
+  onOpen,
+  onClose,
+}: WhiteboardProps) {
+  const room = useRoomContext();
+  const [store] = useState(() =>
+    createTLStore({ shapeUtils: [...defaultShapeUtils] }),
+  );
+  const chunks = useRef(
+    new Map<string, { parts: Uint8Array[]; received: number }>(),
+  );
+  const hasLoadedSnapshot = useRef(false);
+  const visibility = useRef(isOpen);
+  const visibilityCallbacks = useRef({ onOpen, onClose });
+
+  useEffect(() => {
+    visibilityCallbacks.current = { onOpen, onClose };
+  }, [onOpen, onClose]);
+
+  useEffect(() => {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const chunkMap = chunks.current;
+
+    const send = async (
+      message: WhiteboardMessage,
+      destinationIdentity?: string,
+    ) => {
+      const body = encoder.encode(JSON.stringify(message));
+      const id = `${room.localParticipant.identity}-${Date.now()}-${Math.random()}`;
+      const total = Math.ceil(body.length / CHUNK_SIZE);
+
+      for (let index = 0; index < total; index += 1) {
+        const header = encoder.encode(`${id}|${index}|${total}\n`);
+        const part = body.slice(index * CHUNK_SIZE, (index + 1) * CHUNK_SIZE);
+        const payload = new Uint8Array(header.length + part.length);
+        payload.set(header);
+        payload.set(part, header.length);
+        await room.localParticipant.publishData(payload, {
+          reliable: true,
+          topic: WHITEBOARD_TOPIC,
+          destinationIdentities: destinationIdentity
+            ? [destinationIdentity]
+            : undefined,
+        });
+      }
+    };
+
+    const safelySend = (
+      message: WhiteboardMessage,
+      destinationIdentity?: string,
+    ) => {
+      void send(message, destinationIdentity).catch((error) => {
+        console.error('Failed to send whiteboard data:', error);
+      });
+    };
+
+    const applyMessage = (message: WhiteboardMessage, sender?: Participant) => {
+      if (message.type === 'request') {
+        if (sender) {
+          safelySend(
+            {
+              type: 'snapshot',
+              snapshot: store.getStoreSnapshot(),
+              isOpen: visibility.current,
+            },
+            sender.identity,
+          );
+        }
+        return;
+      }
+
+      if (message.type === 'snapshot') {
+        visibility.current = message.isOpen;
+        visibilityCallbacks.current[message.isOpen ? 'onOpen' : 'onClose']();
+        if (hasLoadedSnapshot.current) return;
+        hasLoadedSnapshot.current = true;
+        store.mergeRemoteChanges(() =>
+          store.loadStoreSnapshot(message.snapshot),
+        );
+        return;
+      }
+
+      if (message.type === 'visibility') {
+        visibility.current = message.isOpen;
+        visibilityCallbacks.current[message.isOpen ? 'onOpen' : 'onClose']();
+        return;
+      }
+
+      store.mergeRemoteChanges(() => store.applyDiff(message.changes));
+    };
+
+    const handleData = (
+      payload: Uint8Array,
+      sender?: Participant,
+      _kind?: unknown,
+      topic?: string,
+    ) => {
+      if (topic !== WHITEBOARD_TOPIC) return;
+
+      try {
+        const newline = payload.indexOf(10);
+        if (newline < 0) return;
+        const [id, indexText, totalText] = decoder
+          .decode(payload.slice(0, newline))
+          .split('|');
+        const index = Number(indexText);
+        const total = Number(totalText);
+        if (!id || !Number.isInteger(index) || !Number.isInteger(total)) return;
+
+        const entry = chunkMap.get(id) ?? {
+          parts: Array<Uint8Array>(total),
+          received: 0,
+        };
+        if (!entry.parts[index]) {
+          entry.parts[index] = payload.slice(newline + 1);
+          entry.received += 1;
+        }
+        chunkMap.set(id, entry);
+        if (entry.received !== total) return;
+
+        chunkMap.delete(id);
+        const length = entry.parts.reduce((sum, part) => sum + part.length, 0);
+        const complete = new Uint8Array(length);
+        let offset = 0;
+        for (const part of entry.parts) {
+          complete.set(part, offset);
+          offset += part.length;
+        }
+        applyMessage(
+          JSON.parse(decoder.decode(complete)) as WhiteboardMessage,
+          sender,
+        );
+      } catch (error) {
+        console.error('Failed to sync whiteboard data:', error);
+      }
+    };
+
+    room.on(RoomEvent.DataReceived, handleData);
+    const requestSnapshot = () => safelySend({ type: 'request' });
+    room.on(RoomEvent.Connected, requestSnapshot);
+    const stopListening = store.listen(
+      ({ changes }) => safelySend({ type: 'diff', changes }),
+      { source: 'user', scope: 'document' },
+    );
+    if (room.state === ConnectionState.Connected) requestSnapshot();
+
+    return () => {
+      stopListening();
+      room.off(RoomEvent.DataReceived, handleData);
+      room.off(RoomEvent.Connected, requestSnapshot);
+      chunkMap.clear();
+    };
+  }, [room, store]);
+
+  useEffect(() => {
+    if (visibility.current === isOpen) return;
+    visibility.current = isOpen;
+
+    const payload = new TextEncoder().encode(
+      `${room.localParticipant.identity}-${Date.now()}-visibility|0|1\n${JSON.stringify(
+        { type: 'visibility', isOpen } satisfies WhiteboardMessage,
+      )}`,
+    );
+    void room.localParticipant
+      .publishData(payload, { reliable: true, topic: WHITEBOARD_TOPIC })
+      .catch((error) =>
+        console.error('Failed to sync whiteboard display:', error),
+      );
+  }, [isOpen, room]);
+
   if (!isOpen) return null;
 
   return (
@@ -32,6 +228,7 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
           }}
         >
           <Tldraw
+            store={store}
             components={{
               StylePanel: () => (
                 <div
