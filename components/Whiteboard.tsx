@@ -22,22 +22,15 @@ type WhiteboardMessage =
       snapshot: ReturnType<
         ReturnType<typeof createTLStore>['getStoreSnapshot']
       >;
-      isOpen: boolean;
     }
-  | { type: 'diff'; changes: TLStoreEventInfo['changes'] }
-  | { type: 'visibility'; isOpen: boolean };
+  | { type: 'diff'; changes: TLStoreEventInfo['changes'] };
 
 interface WhiteboardProps {
   isOpen: boolean;
-  onOpen: () => void;
   onClose: () => void;
 }
 
-export default function Whiteboard({
-  isOpen,
-  onOpen,
-  onClose,
-}: WhiteboardProps) {
+export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
   const room = useRoomContext();
   const [store] = useState(() =>
     createTLStore({ shapeUtils: [...defaultShapeUtils] }),
@@ -46,12 +39,6 @@ export default function Whiteboard({
     new Map<string, { parts: Uint8Array[]; received: number }>(),
   );
   const hasLoadedSnapshot = useRef(false);
-  const visibility = useRef(isOpen);
-  const visibilityCallbacks = useRef({ onOpen, onClose });
-
-  useEffect(() => {
-    visibilityCallbacks.current = { onOpen, onClose };
-  }, [onOpen, onClose]);
 
   useEffect(() => {
     const encoder = new TextEncoder();
@@ -98,7 +85,6 @@ export default function Whiteboard({
             {
               type: 'snapshot',
               snapshot: store.getStoreSnapshot(),
-              isOpen: visibility.current,
             },
             sender.identity,
           );
@@ -107,19 +93,11 @@ export default function Whiteboard({
       }
 
       if (message.type === 'snapshot') {
-        visibility.current = message.isOpen;
-        visibilityCallbacks.current[message.isOpen ? 'onOpen' : 'onClose']();
         if (hasLoadedSnapshot.current) return;
         hasLoadedSnapshot.current = true;
         store.mergeRemoteChanges(() =>
           store.loadStoreSnapshot(message.snapshot),
         );
-        return;
-      }
-
-      if (message.type === 'visibility') {
-        visibility.current = message.isOpen;
-        visibilityCallbacks.current[message.isOpen ? 'onOpen' : 'onClose']();
         return;
       }
 
@@ -188,22 +166,6 @@ export default function Whiteboard({
       chunkMap.clear();
     };
   }, [room, store]);
-
-  useEffect(() => {
-    if (visibility.current === isOpen) return;
-    visibility.current = isOpen;
-
-    const payload = new TextEncoder().encode(
-      `${room.localParticipant.identity}-${Date.now()}-visibility|0|1\n${JSON.stringify(
-        { type: 'visibility', isOpen } satisfies WhiteboardMessage,
-      )}`,
-    );
-    void room.localParticipant
-      .publishData(payload, { reliable: true, topic: WHITEBOARD_TOPIC })
-      .catch((error) =>
-        console.error('Failed to sync whiteboard display:', error),
-      );
-  }, [isOpen, room]);
 
   if (!isOpen) return null;
 
