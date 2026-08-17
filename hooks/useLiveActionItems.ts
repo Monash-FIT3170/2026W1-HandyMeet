@@ -187,8 +187,11 @@ export function useLiveActionItems({
     setActionItems(actionItemsRef.current);
   }
 
-  function acceptItem(id: string) {
-    updateItem(id, { status: 'accepted' });
+  function acceptItem(id: string, ownerName?: string) {
+    updateItem(id, {
+      status: 'accepted',
+      ...(ownerName ? { owner: ownerName } : {}),
+    });
   }
 
   function dismissItem(id: string) {
