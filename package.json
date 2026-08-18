@@ -11,6 +11,9 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "typecheck": "tsc --noEmit",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "gesture:model:export": "./scripts/gesture-recognition/.venv/bin/python scripts/gesture-recognition/export_tfjs.py",
     "check": "npm run lint && npm run format:check && npm run typecheck",
     "fix": "npm run lint:fix && npm run format",
@@ -43,6 +46,9 @@
     "tldraw": "^5.3.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^15.0.0",
+    "@types/jest": "^29.5.11",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -50,7 +56,10 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
     "husky": "^9.1.7",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "prettier": "3.8.1",
+    "ts-jest": "^29.1.1",
     "tsx": "^4.22.0",
     "typescript": "^5"
   }
