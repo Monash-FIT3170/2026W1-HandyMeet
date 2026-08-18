@@ -1,16 +1,27 @@
 'use client';
 
 import 'tldraw/tldraw.css';
-import { useRoomContext } from '@livekit/components-react';
-import { ConnectionState, RoomEvent, type Participant } from 'livekit-client';
-import { useEffect, useRef, useState } from 'react';
+import '@tldraw/commenting/commenting.css';
+import { useParticipants, useRoomContext } from '@livekit/components-react';
+import { ConnectionState, type Participant, RoomEvent } from 'livekit-client';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  commentSchemaRecords,
+  createTLSchema,
   createTLStore,
-  DefaultStylePanel,
   defaultShapeUtils,
+  DefaultStylePanel,
   Tldraw,
   type TLStoreEventInfo,
 } from 'tldraw';
+import {
+  CanvasComments,
+  CommentAuthor,
+  CommentTool,
+  commentToolOverrides,
+  filterMentionMembers,
+  MentionMember,
+} from '@tldraw/commenting';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
 const CHUNK_SIZE = 12_000;
@@ -33,7 +44,10 @@ interface WhiteboardProps {
 export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
   const room = useRoomContext();
   const [store] = useState(() =>
-    createTLStore({ shapeUtils: [...defaultShapeUtils] }),
+    createTLStore({
+      schema: createTLSchema({ records: commentSchemaRecords }),
+      shapeUtils: [...defaultShapeUtils],
+    }),
   );
   const chunks = useRef(
     new Map<string, { parts: Uint8Array[]; received: number }>(),
@@ -167,6 +181,33 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
     };
   }, [room, store]);
 
+  const participants = useParticipants();
+  const currentUserId = room.localParticipant?.identity;
+  const tldrawMembers: MentionMember[] = useMemo(() => {
+    return participants.map((p) => {
+      const isMe = p.identity === currentUserId;
+
+      let hash = 0;
+      for (let i = 0; i < p.identity.length; i++) {
+        hash = p.identity.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const hue = Math.abs(hash) % 360;
+      const color = `hsl(${hue}, 80%, 50%)`;
+
+      return {
+        id: p.identity,
+        name: p.name || (isMe ? 'You' : p.identity),
+        color,
+        you: isMe,
+      };
+    });
+  }, [participants, currentUserId]);
+  const tldrawAuthors: Record<string, CommentAuthor> = useMemo(() => {
+    return Object.fromEntries(tldrawMembers.map((m) => [m.id, m]));
+  }, [tldrawMembers]);
+  const resolveTldrawAuthor = (id: string): CommentAuthor =>
+    tldrawAuthors[id] ?? { name: id };
+
   if (!isOpen) return null;
 
   return (
@@ -190,8 +231,20 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
           }}
         >
           <Tldraw
+            licenseKey={process.env.NEXT_PUBLIC_TLDRAW_LICENSE_KEY}
             store={store}
+            tools={[CommentTool.configure({ enableRegions: true })]}
+            overrides={[commentToolOverrides]}
             components={{
+              InFrontOfTheCanvas: () => (
+                <CanvasComments
+                  currentUserId={currentUserId}
+                  resolveAuthor={resolveTldrawAuthor}
+                  getMentionSuggestions={(query) =>
+                    filterMentionMembers(tldrawMembers, query)
+                  }
+                />
+              ),
               StylePanel: () => (
                 <div
                   style={{
