@@ -49,12 +49,12 @@ export default defineAgent({
     }
 
     // Add agent when a new person joins
-    ctx.room.on('participantConnected', async (participant: Participant) => {
+    ctx.room.on('participantConnected', async (participant) => {
       await startTranscribingParticipant(participant.identity);
     });
 
     // Remove agent when person leaves
-    ctx.room.on('participantDisconnected', (participant: Participant) => {
+    ctx.room.on('participantDisconnected', (participant) => {
       const session = sessions.get(participant.identity);
       session?.close();
       sessions.delete(participant.identity);
