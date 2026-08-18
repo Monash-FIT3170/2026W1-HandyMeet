@@ -89,6 +89,7 @@ export default function RoomClient({
         <Whiteboard
           isOpen={whiteboardOpen}
           onClose={() => setWhiteboardOpen(false)}
+          username={username}
         />
       </LiveKitRoom>
     </main>
