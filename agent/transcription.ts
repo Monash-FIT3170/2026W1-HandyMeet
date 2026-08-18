@@ -6,6 +6,7 @@ import {
   ServerOptions,
 } from '@livekit/agents';
 import * as deepgram from '@livekit/agents-plugin-deepgram';
+import { Participant } from 'livekit-client';
 import { fileURLToPath } from 'node:url';
 
 function createTranscriptionSession() {
@@ -48,12 +49,12 @@ export default defineAgent({
     }
 
     // Add agent when a new person joins
-    ctx.room.on('participantConnected', async (participant) => {
+    ctx.room.on('participantConnected', async (participant: Participant) => {
       await startTranscribingParticipant(participant.identity);
     });
 
     // Remove agent when person leaves
-    ctx.room.on('participantDisconnected', (participant) => {
+    ctx.room.on('participantDisconnected', (participant: Participant) => {
       const session = sessions.get(participant.identity);
       session?.close();
       sessions.delete(participant.identity);
