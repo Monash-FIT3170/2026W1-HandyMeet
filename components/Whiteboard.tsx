@@ -75,6 +75,7 @@ function HoverWatcher({
 }
 
 // Runs inside tldraw context — stamps author on locally created shapes
+// and prevents deletion of shapes owned by other users
 function AuthorStamper({
   username,
   editorRef,
@@ -86,7 +87,8 @@ function AuthorStamper({
 
   useEffect(() => {
     editorRef.current = editor;
-    const cleanup = editor.sideEffects.registerBeforeCreateHandler(
+
+    const cleanupCreate = editor.sideEffects.registerBeforeCreateHandler(
       'shape',
       (shape: TLShape) => {
         return {
@@ -95,7 +97,22 @@ function AuthorStamper({
         };
       },
     );
-    return cleanup;
+
+    const cleanupDelete = editor.sideEffects.registerBeforeDeleteHandler(
+      'shape',
+      (shape: TLShape) => {
+        const author = shape.meta?.author;
+        // Allow deletion only if shape has no author (legacy) or author matches current user
+        if (typeof author === 'string' && author !== username) {
+          return false;
+        }
+      },
+    );
+
+    return () => {
+      cleanupCreate();
+      cleanupDelete();
+    };
   }, [editor, username, editorRef]);
 
   return null;
