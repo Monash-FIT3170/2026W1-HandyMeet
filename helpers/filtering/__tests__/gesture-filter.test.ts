@@ -7,8 +7,6 @@ jest.mock('@/helpers/gestures/handler', () => ({
   handleAction: jest.fn().mockResolvedValue(true),
 }));
 
-import { handleAction } from '@/helpers/gestures/handler';
-
 /**
  * Unit tests for gesture-filter.ts
  * Uses Given-When-Then pattern for clarity
@@ -58,7 +56,6 @@ describe('processGesture', () => {
 
       // When
       await processGesture(room, firstGesture);
-      const currentTime = Date.now();
 
       // Then
       // Immediately check with same gesture before hold time expires
