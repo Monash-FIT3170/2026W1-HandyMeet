@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { HandLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import {
+  HandLandmarker,
+  FilesetResolver,
+  type NormalizedLandmark,
+} from '@mediapipe/tasks-vision';
 import {
   detectDrawingGesture,
   getIndexFingerTip,
@@ -12,6 +16,20 @@ export type DrawingStroke = DrawingPoint[];
 const SMOOTHING_WINDOW = 5;
 const STABILITY_FRAMES_REQUIRED = 4;
 const JUMP_THRESHOLD = 0.15;
+
+type HandState = {
+  positionHistory: DrawingPoint[];
+  gestureStability: number;
+  lastPosition: DrawingPoint | null;
+};
+
+function createEmptyHandState(): HandState {
+  return {
+    positionHistory: [],
+    gestureStability: 0,
+    lastPosition: null,
+  };
+}
 
 type UseGestureDrawingOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -43,9 +61,8 @@ export function useGestureDrawing({
   const onStrokeUpdateRef = useRef(onStrokeUpdate);
   const enabledRef = useRef(enabled);
 
-  const positionHistoryRef = useRef<DrawingPoint[]>([]);
-  const gestureStabilityRef = useRef<number>(0);
-  const lastPositionRef = useRef<DrawingPoint | null>(null);
+  const handStatesRef = useRef<Map<string, HandState>>(new Map());
+  const activeHandLabelRef = useRef<string | null>(null);
 
   useEffect(() => {
     onStrokeCompleteRef.current = onStrokeComplete;
@@ -72,7 +89,7 @@ export function useGestureDrawing({
           delegate: 'GPU',
         },
         runningMode: 'VIDEO',
-        numHands: 1,
+        numHands: 2,
       });
     }
 
@@ -128,6 +145,8 @@ export function useGestureDrawing({
       if (results.landmarks.length === 0) {
         setCursorPosition(null);
         setCurrentGesture(null);
+        activeHandLabelRef.current = null;
+        handStatesRef.current.clear();
 
         if (wasDrawing && currentStrokeRef.current.length > 0) {
           onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
@@ -140,45 +159,91 @@ export function useGestureDrawing({
         return;
       }
 
-      const landmarks = results.landmarks[0];
-      if (!landmarks) {
+      const handsWithGestures = results.landmarks.map(
+        (landmarks: NormalizedLandmark[], index: number) => {
+          const handednessLabel =
+            results.handedness[index]?.[0]?.categoryName ?? `hand-${index}`;
+          return {
+            label: handednessLabel,
+            landmarks,
+            gesture: detectDrawingGesture(landmarks, wasDrawing),
+            fingerTip: getIndexFingerTip(landmarks),
+          };
+        },
+      );
+
+      const pointingHands = handsWithGestures.filter(
+        (h) => h.gesture === DrawingGesture.Pointing,
+      );
+
+      let selectedHand = null;
+
+      if (pointingHands.length > 0) {
+        const currentActive = activeHandLabelRef.current;
+        const stillPointing = pointingHands.find(
+          (h) => h.label === currentActive,
+        );
+        selectedHand = stillPointing ?? pointingHands[0];
+      } else {
+        const fistHand = handsWithGestures.find(
+          (h) => h.gesture === DrawingGesture.Fist,
+        );
+        if (fistHand) {
+          selectedHand = fistHand;
+        }
+      }
+
+      if (!selectedHand) {
+        const anyHand = handsWithGestures[0];
+        if (anyHand?.fingerTip) {
+          const mirroredX = 1 - anyHand.fingerTip.x;
+          setCursorPosition({ x: mirroredX, y: anyHand.fingerTip.y });
+        } else {
+          setCursorPosition(null);
+        }
+        setCurrentGesture(null);
         animationFrameRef.current = requestAnimationFrame(detect);
         return;
       }
 
-      const gesture = detectDrawingGesture(landmarks, wasDrawing);
-      setCurrentGesture(gesture);
+      activeHandLabelRef.current = selectedHand.label;
+      setCurrentGesture(selectedHand.gesture);
 
-      const fingerTip = getIndexFingerTip(landmarks);
+      const fingerTip = selectedHand.fingerTip;
 
       if (fingerTip) {
+        if (!handStatesRef.current.has(selectedHand.label)) {
+          handStatesRef.current.set(selectedHand.label, createEmptyHandState());
+        }
+        const handState = handStatesRef.current.get(selectedHand.label)!;
+
         const mirroredX = 1 - fingerTip.x;
         const rawPosition = { x: mirroredX, y: fingerTip.y };
 
-        positionHistoryRef.current.push(rawPosition);
-        if (positionHistoryRef.current.length > SMOOTHING_WINDOW) {
-          positionHistoryRef.current.shift();
+        handState.positionHistory.push(rawPosition);
+        if (handState.positionHistory.length > SMOOTHING_WINDOW) {
+          handState.positionHistory.shift();
         }
 
         const smoothedPosition = {
           x:
-            positionHistoryRef.current.reduce((sum, p) => sum + p.x, 0) /
-            positionHistoryRef.current.length,
+            handState.positionHistory.reduce((sum, p) => sum + p.x, 0) /
+            handState.positionHistory.length,
           y:
-            positionHistoryRef.current.reduce((sum, p) => sum + p.y, 0) /
-            positionHistoryRef.current.length,
+            handState.positionHistory.reduce((sum, p) => sum + p.y, 0) /
+            handState.positionHistory.length,
         };
 
         setCursorPosition(smoothedPosition);
 
-        if (gesture === DrawingGesture.Pointing) {
-          gestureStabilityRef.current++;
+        if (selectedHand.gesture === DrawingGesture.Pointing) {
+          handState.gestureStability++;
 
           const isStable =
-            gestureStabilityRef.current >= STABILITY_FRAMES_REQUIRED;
+            handState.gestureStability >= STABILITY_FRAMES_REQUIRED;
 
           if (isStable) {
-            const lastPos = lastPositionRef.current;
+            const lastPos = handState.lastPosition;
             const jumped =
               lastPos &&
               Math.hypot(
@@ -197,11 +262,11 @@ export function useGestureDrawing({
               onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
             }
 
-            lastPositionRef.current = smoothedPosition;
+            handState.lastPosition = smoothedPosition;
           }
-        } else if (gesture === DrawingGesture.Fist) {
-          gestureStabilityRef.current = 0;
-          lastPositionRef.current = null;
+        } else if (selectedHand.gesture === DrawingGesture.Fist) {
+          handState.gestureStability = 0;
+          handState.lastPosition = null;
 
           if (wasDrawing && currentStrokeRef.current.length > 0) {
             onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
@@ -210,13 +275,11 @@ export function useGestureDrawing({
           wasDrawing = false;
           setIsDrawing(false);
         } else {
-          gestureStabilityRef.current = 0;
+          handState.gestureStability = 0;
         }
       } else {
         setCursorPosition(null);
-        positionHistoryRef.current = [];
-        gestureStabilityRef.current = 0;
-        lastPositionRef.current = null;
+        handStatesRef.current.delete(selectedHand.label);
       }
 
       animationFrameRef.current = requestAnimationFrame(detect);
