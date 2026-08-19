@@ -10,11 +10,17 @@ import {
 import { Reaction } from '@/constants/reactions';
 import gestureLabels from '@/scripts/gesture-recognition/model_labels.json';
 import {
-  HAND_FEATURE_VECTOR_LENGTH,
+  VALUES_PER_HAND,
   type HandFeatureVectors,
 } from './handLandmarkFeatures';
 import type { Action } from './handler';
 import { processGesture } from '../filtering/gesture-filter';
+import {
+  calculateDistance3D,
+  calculatePalmDistance,
+  getLandmarkCoordinatesFromFeatures,
+  sentinelArray,
+} from './utilities';
 
 export type GestureModelInput = Float32Array;
 export type GestureModelOutput = Float32Array;
@@ -31,6 +37,13 @@ type GesturePredictionCandidate = {
 let gestureModelPromise: Promise<tf.LayersModel> | null = null;
 const gestureValues = new Set<string>(Object.values(Gesture));
 const reactionValues = new Set<string>(Object.values(Reaction));
+
+const SINGLE_HAND_FEATURE_COUNT = 10;
+const BOTH_HANDS_FEATURE_COUNT = 26;
+const ENGINEERED_SENTINEL_VALUE = 10;
+
+// indices of landmarks required for engineered features
+const FINGER_TIPS = [4, 8, 12, 16, 20];
 
 const loadGestureModel = (): Promise<tf.LayersModel> => {
   if (!gestureModelPromise) {
@@ -101,12 +114,6 @@ const predictGesture = async (
   const model = await loadGestureModel();
   const expectedInputSize = getExpectedInputSize(model);
 
-  if (expectedInputSize !== HAND_FEATURE_VECTOR_LENGTH) {
-    throw new Error(
-      `Gesture feature width does not match model input: ${HAND_FEATURE_VECTOR_LENGTH} features vs ${expectedInputSize} expected by model`,
-    );
-  }
-
   if (input.length !== expectedInputSize) {
     throw new Error(
       `Gesture input width is invalid: ${input.length} features vs ${expectedInputSize} expected by model`,
@@ -137,10 +144,74 @@ const qualifiesAsTwoHandGesture = (
     twoHand.prediction.score >= MULTI_HAND_CONFIDENCE_THRESHOLD;
   const beatsBestSingleHand =
     bestSingleHand === undefined ||
-    twoHand.prediction.score >=
-      bestSingleHand.prediction.score + TWO_HAND_PREFERENCE_MARGIN;
+    twoHand.prediction.score + TWO_HAND_PREFERENCE_MARGIN >=
+      bestSingleHand.prediction.score;
 
   return isTwoHandGesture && clearsThreshold && beatsBestSingleHand;
+};
+
+const calculateSingleHandEngineeredFeatures = (
+  landmarks: number[],
+): number[] => {
+  const res: number[] = [];
+  for (let i = 0; i < FINGER_TIPS.length; i++) {
+    const tip1 = getLandmarkCoordinatesFromFeatures(landmarks, FINGER_TIPS[i]);
+    for (let j = i + 1; j < FINGER_TIPS.length; j++) {
+      const tip2 = getLandmarkCoordinatesFromFeatures(
+        landmarks,
+        FINGER_TIPS[j],
+      );
+      res.push(calculateDistance3D(tip1, tip2));
+    }
+  }
+  return res;
+};
+
+const calculateOppositeFingertipDistances = (
+  left: number[],
+  right: number[],
+): number[] => {
+  const res: number[] = [];
+  for (let i = 0; i < FINGER_TIPS.length; i++) {
+    const leftTip = getLandmarkCoordinatesFromFeatures(left, FINGER_TIPS[i]);
+    for (let j = 0; j < FINGER_TIPS.length; j++) {
+      const rightTip = getLandmarkCoordinatesFromFeatures(
+        right,
+        FINGER_TIPS[j],
+      );
+      res.push(calculateDistance3D(leftTip, rightTip));
+    }
+  }
+  return res;
+};
+
+const calculateBothHandEngineeredFeatures = (
+  left: number[],
+  right: number[],
+): number[] => {
+  const handsDistance = calculatePalmDistance(left, right);
+  const oppositeFingertipDistances = calculateOppositeFingertipDistances(
+    left,
+    right,
+  );
+  return [handsDistance].concat(oppositeFingertipDistances);
+};
+
+const calculateEngineeredFeatures = (
+  left: number[] | null,
+  right: number[] | null,
+) => {
+  const leftFeatures = left
+    ? calculateSingleHandEngineeredFeatures(left)
+    : sentinelArray(0, SINGLE_HAND_FEATURE_COUNT);
+  const rightFeatures = right
+    ? calculateSingleHandEngineeredFeatures(right)
+    : sentinelArray(0, SINGLE_HAND_FEATURE_COUNT);
+  const bothFeatures =
+    left && right
+      ? calculateBothHandEngineeredFeatures(left, right)
+      : sentinelArray(ENGINEERED_SENTINEL_VALUE, BOTH_HANDS_FEATURE_COUNT);
+  return leftFeatures.concat(rightFeatures).concat(bothFeatures);
 };
 
 export const predictGestureAction = async (
@@ -151,23 +222,38 @@ export const predictGestureAction = async (
   const candidates: GesturePredictionCandidate[] = [];
 
   if (featureVectors.left) {
+    const engineeredFeatures = calculateEngineeredFeatures(
+      featureVectors.left.slice(0, VALUES_PER_HAND),
+      null,
+    );
+    const fullInput = featureVectors.left.concat(engineeredFeatures);
     candidates.push({
       candidateName: 'left-only',
-      prediction: await predictGesture(Float32Array.from(featureVectors.left)),
+      prediction: await predictGesture(Float32Array.from(fullInput)),
     });
   }
 
   if (featureVectors.right) {
+    const engineeredFeatures = calculateEngineeredFeatures(
+      null,
+      featureVectors.right.slice(VALUES_PER_HAND),
+    );
+    const fullInput = featureVectors.right.concat(engineeredFeatures);
     candidates.push({
       candidateName: 'right-only',
-      prediction: await predictGesture(Float32Array.from(featureVectors.right)),
+      prediction: await predictGesture(Float32Array.from(fullInput)),
     });
   }
 
   if (featureVectors.both) {
+    const engineeredFeatures = calculateEngineeredFeatures(
+      featureVectors.both.slice(0, VALUES_PER_HAND),
+      featureVectors.both.slice(VALUES_PER_HAND),
+    );
+    const fullInput = featureVectors.both.concat(engineeredFeatures);
     candidates.push({
       candidateName: 'both-hands',
-      prediction: await predictGesture(Float32Array.from(featureVectors.both)),
+      prediction: await predictGesture(Float32Array.from(fullInput)),
     });
   }
 
