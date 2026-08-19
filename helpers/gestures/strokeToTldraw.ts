@@ -1,4 +1,5 @@
-import { Editor, createShapeId, b64Vecs } from 'tldraw';
+import { Editor, createShapeId } from 'tldraw';
+import { b64Vecs } from '@tldraw/tlschema';
 import type { DrawingStroke } from '@/hooks/useGestureDrawing';
 
 export function addStrokeToTldraw(
