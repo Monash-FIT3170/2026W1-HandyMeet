@@ -15,17 +15,18 @@ interface WhiteboardProps {
   isOpen: boolean;
   onClose: () => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
+  isCameraEnabled: boolean;
 }
 
 export default function Whiteboard({
   isOpen,
   onClose,
   localVideoRef,
+  isCameraEnabled,
 }: WhiteboardProps) {
   const [gestureDrawingEnabled, setGestureDrawingEnabled] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke>([]);
-  const [cameraAvailable, setCameraAvailable] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
 
@@ -48,19 +49,6 @@ export default function Whiteboard({
     return () => resizeObserver.disconnect();
   }, [isOpen]);
 
-  useEffect(() => {
-    const checkCamera = () => {
-      const video = localVideoRef.current;
-      setCameraAvailable(
-        !!video && video.readyState >= 2 && video.videoWidth > 0,
-      );
-    };
-
-    checkCamera();
-    const interval = setInterval(checkCamera, 500);
-    return () => clearInterval(interval);
-  }, [localVideoRef, gestureDrawingEnabled]);
-
   const handleStrokeComplete = useCallback(
     (stroke: DrawingStroke) => {
       if (editorRef.current && stroke.length >= 2) {
@@ -82,7 +70,7 @@ export default function Whiteboard({
 
   const { isDrawing, cursorPosition, currentGesture } = useGestureDrawing({
     videoRef: localVideoRef,
-    enabled: gestureDrawingEnabled && cameraAvailable,
+    enabled: gestureDrawingEnabled && isCameraEnabled,
     onStrokeComplete: handleStrokeComplete,
     onStrokeUpdate: handleStrokeUpdate,
   });
@@ -104,17 +92,13 @@ export default function Whiteboard({
         <div className="flex items-center gap-3">
           <button
             onClick={handleToggleGestureDrawing}
-            disabled={!cameraAvailable}
             className={`text-xs px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-2 ${
-              !cameraAvailable
-                ? 'bg-neutral-800 text-neutral-500 cursor-not-allowed'
-                : gestureDrawingEnabled
+              gestureDrawingEnabled
+                ? isCameraEnabled
                   ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                  : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                  : 'bg-amber-600 hover:bg-amber-500 text-white'
+                : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
             }`}
-            title={
-              !cameraAvailable ? 'Enable camera to use gesture drawing' : ''
-            }
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -131,14 +115,10 @@ export default function Whiteboard({
               <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12z" />
               <path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" />
             </svg>
-            {!cameraAvailable
-              ? 'Camera required'
-              : gestureDrawingEnabled
-                ? 'Gesture Draw: ON'
-                : 'Gesture Draw'}
+            {gestureDrawingEnabled ? 'Gesture Draw: ON' : 'Gesture Draw'}
           </button>
 
-          {gestureDrawingEnabled && cameraAvailable && (
+          {gestureDrawingEnabled && isCameraEnabled && (
             <div className="flex items-center gap-2 text-xs text-neutral-400">
               {currentGesture === DrawingGesture.Pointing && (
                 <span className="flex items-center gap-1 text-blue-400">
@@ -198,7 +178,7 @@ export default function Whiteboard({
           />
         </div>
 
-        {gestureDrawingEnabled && cameraAvailable && (
+        {gestureDrawingEnabled && isCameraEnabled && (
           <GestureDrawingOverlay
             cursorPosition={cursorPosition}
             strokes={currentStroke.length > 0 ? [currentStroke] : []}
@@ -209,7 +189,30 @@ export default function Whiteboard({
           />
         )}
 
-        {gestureDrawingEnabled && cameraAvailable && (
+        {gestureDrawingEnabled && !isCameraEnabled && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-amber-500/90 backdrop-blur-sm rounded-lg px-4 py-3 text-sm text-black flex items-center gap-3 shadow-lg">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M10.5 22H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10" />
+              <circle cx="12" cy="11" r="3" />
+              <path d="m17 17 5 5m-5 0 5-5" />
+            </svg>
+            <span className="font-medium">
+              Camera is off — turn on your camera to use gesture drawing
+            </span>
+          </div>
+        )}
+
+        {gestureDrawingEnabled && isCameraEnabled && (
           <div className="absolute bottom-4 left-4 bg-neutral-900/90 backdrop-blur-sm rounded-lg p-3 text-xs text-neutral-300 max-w-[200px] border border-neutral-700">
             <p className="font-semibold mb-2 text-white">Gesture Controls</p>
             <div className="space-y-1">

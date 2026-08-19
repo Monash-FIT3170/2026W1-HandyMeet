@@ -26,6 +26,7 @@ export default function RoomClient({
     defaultCaptionSettings,
   );
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const [isCameraEnabled, setIsCameraEnabled] = useState(false);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
 
@@ -87,6 +88,7 @@ export default function RoomClient({
           onLocalVideoRef={(video) => {
             localVideoRef.current = video;
           }}
+          onCameraEnabledChange={setIsCameraEnabled}
         />
         <Captions settings={captionSettings} />
 
@@ -94,6 +96,7 @@ export default function RoomClient({
           isOpen={whiteboardOpen}
           onClose={() => setWhiteboardOpen(false)}
           localVideoRef={localVideoRef}
+          isCameraEnabled={isCameraEnabled}
         />
       </LiveKitRoom>
     </main>

@@ -93,6 +93,7 @@ type MeetingRoomProps = {
   whiteboardOpen: boolean;
   onToggleWhiteboard: () => void;
   onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
+  onCameraEnabledChange?: (enabled: boolean) => void;
 };
 
 export default function MeetingRoom({
@@ -101,6 +102,7 @@ export default function MeetingRoom({
   whiteboardOpen,
   onToggleWhiteboard,
   onLocalVideoRef,
+  onCameraEnabledChange,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
@@ -184,6 +186,10 @@ export default function MeetingRoom({
       }, 0);
     }
   }, [isCameraEnabled]);
+
+  useEffect(() => {
+    onCameraEnabledChange?.(isCameraEnabled);
+  }, [isCameraEnabled, onCameraEnabledChange]);
 
   function handleToggleTracking() {
     setTrackingEnabled((prev) => {
