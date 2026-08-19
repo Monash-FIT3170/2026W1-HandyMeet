@@ -24,8 +24,9 @@ A minimum confidence threshold must be met to classify a gesture to reduce the c
 
 1. Ensure you are in the virtual environment: `source .venv/bin/activate`
 2. Generate the images from the raw videos: `uv run training_data/videos_to_frames.py`
-3. Generate labelled Mediapipe landmark data from the images: `uv run training_data/images_to_training_data.py`
-4. Generate mirrored training data to allow both hands: `uv run training_data/append_mirrored_data.py`
+3. Generate labelled Mediapipe landmark data from the images: `uv run training_data/images_to_landmarks.py`
+4. Generate mirrored training data to allow both hands: `uv run training_data/append_mirrored_landmarks.py`
+4. Calculate engineered features: `uv run training_data/append_features.py`
 5. Train the model on the labelled data: `uv run train_model.py`
 6. Export the trained model into the app's TensorFlow.js format and verify it loads in JavaScript: `cd ../.. && npm run gesture:model:export`
 
