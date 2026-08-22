@@ -21,6 +21,7 @@ import {
   getLandmarkCoordinatesFromFeatures,
   sentinelArray,
 } from './utilities';
+import { CaptionGesture } from '@/constants/captions';
 
 export type GestureModelInput = Float32Array;
 export type GestureModelOutput = Float32Array;
@@ -37,6 +38,7 @@ type GesturePredictionCandidate = {
 let gestureModelPromise: Promise<tf.LayersModel> | null = null;
 const gestureValues = new Set<string>(Object.values(Gesture));
 const reactionValues = new Set<string>(Object.values(Reaction));
+const captionValues = new Set<string>(Object.values(CaptionGesture));
 
 const SINGLE_HAND_FEATURE_COUNT = 10;
 const BOTH_HANDS_FEATURE_COUNT = 26;
@@ -103,6 +105,10 @@ const mapPredictedGestureToAction = (
 
   if (reactionValues.has(prediction.label)) {
     return prediction.label as Reaction;
+  }
+
+  if (captionValues.has(prediction.label)) {
+    return prediction.label as CaptionGesture;
   }
 
   return null;

@@ -5,7 +5,6 @@ import {
   ActionHandler,
   disableCamera,
   disableMicrophone,
-  enableCamera,
   enableMicrophone,
   raiseHand,
   sendThumbsDown,
@@ -15,12 +14,13 @@ import {
   sendOk,
   sendThankYou,
 } from './actions';
+import { CaptionGesture } from '@/constants/captions';
+import { publishGestureCaption } from './captions';
 
-export type Action = Gesture | Reaction;
+export type Action = Gesture | Reaction | CaptionGesture;
 
 const actionEntries: Array<[Action, ActionHandler]> = [
   [Gesture.CameraOff, disableCamera],
-  [Gesture.CameraOn, enableCamera],
   [Gesture.Mute, disableMicrophone],
   [Reaction.RaiseHand, raiseHand],
   [Reaction.ThumbsDown, sendThumbsDown],
@@ -33,6 +33,7 @@ const actionEntries: Array<[Action, ActionHandler]> = [
 ];
 
 const actionMap = new Map<Action, ActionHandler>(actionEntries);
+const captionValues = new Set<string>(Object.values(CaptionGesture));
 
 /**
  * Processes a gesture or reaction by looking up and executing its associated handler.
@@ -53,7 +54,6 @@ export const handleAction = async (
   if (!handler) {
     return false;
   }
-
   await handler(room);
 
   return true;
