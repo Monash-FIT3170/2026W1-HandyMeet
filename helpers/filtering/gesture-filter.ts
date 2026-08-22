@@ -1,6 +1,6 @@
 import type { Room } from 'livekit-client';
 import { Gesture } from '../../constants/gestures';
-import { handleAction } from '../gestures/handler';
+import { Action, handleAction } from '../gestures/handler';
 
 let currentGesture: string | null = null;
 let gestureStart = 0;
@@ -33,7 +33,7 @@ export async function processGesture(
     if (currentGesture === Gesture.EndCall) {
       requestLeave?.();
     } else {
-      await handleAction(room, currentGesture as Gesture);
+      await handleAction(room, currentGesture as Action);
     }
     triggered = true;
   }
