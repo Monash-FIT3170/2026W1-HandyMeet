@@ -49,8 +49,12 @@ export const handleAction = async (
   room: Room,
   action: Action,
 ): Promise<boolean> => {
-  const handler = actionMap.get(action);
+  if (captionValues.has(action)) {
+    await publishGestureCaption(room, action);
+    return true;
+  }
 
+  const handler = actionMap.get(action);
   if (!handler) {
     return false;
   }

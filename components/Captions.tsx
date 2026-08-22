@@ -1,9 +1,10 @@
 'use client';
 
 import '@livekit/components-styles';
-import { useTranscriptions } from '@livekit/components-react';
+import { useRoomContext, useTranscriptions } from '@livekit/components-react';
 import { useState } from 'react';
 import type { CaptionSettings } from './TranscriptionSettings';
+import { useGestureCaptions } from '@/hooks/useGestureCaptions';
 
 type Props = {
   settings: CaptionSettings;
@@ -12,11 +13,15 @@ type Props = {
 export default function Captions({ settings }: Props) {
   const [expandCaptions, setExpandCaptions] = useState(false);
 
+  const room = useRoomContext();
+  const { gestureCaptions } = useGestureCaptions(room);
+
   const transcriptions = useTranscriptions();
 
-  const captions = expandCaptions
-    ? transcriptions.slice(-8)
-    : transcriptions.slice(-2);
+  const captions = [
+    ...transcriptions.slice(expandCaptions ? -8 : -2),
+    ...gestureCaptions,
+  ];
 
   if (!captions.length) {
     return null;
