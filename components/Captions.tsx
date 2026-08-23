@@ -7,9 +7,10 @@ import type { CaptionSettings } from './TranscriptionSettings';
 
 type Props = {
   settings: CaptionSettings;
+  position?: 'default' | 'whiteboard';
 };
 
-export default function Captions({ settings }: Props) {
+export default function Captions({ settings, position = 'default' }: Props) {
   const [expandCaptions, setExpandCaptions] = useState(false);
 
   const transcriptions = useTranscriptions();
@@ -18,13 +19,18 @@ export default function Captions({ settings }: Props) {
     ? transcriptions.slice(-8)
     : transcriptions.slice(-2);
 
+  const style =
+    position === 'whiteboard'
+      ? 'z-[100] w-[340] fixed left-[calc(((100vw-320px)/2)-60px)] -translate-x-1/2 bottom-30'
+      : 'w-[500px] fixed left-1/2 -translate-x-1/2 bottom-20';
+
   if (!captions.length) {
     return null;
   }
 
   if (!settings.visible) {
     return (
-      <div className="w-[500px] fixed bottom-20 left-1/2 -translate-x-1/2">
+      <div className={`${style}`}>
         <div className="flex gap-2 w-full mb-2 self-start items-center px-1">
           <span className="px-2 h-6 flex items-center justify-center rounded bg-neutral-100/20 text-[13px] font-bold tracking-wider text-neutral-100/50 select-none">
             CC: Hidden
@@ -35,7 +41,7 @@ export default function Captions({ settings }: Props) {
   }
 
   return (
-    <div className="w-[500px] fixed bottom-20 left-1/2 -translate-x-1/2">
+    <div className={`${style}`}>
       <div className="flex gap-2 w-full mb-2 self-start items-center px-1">
         <button
           onClick={() => setExpandCaptions(!expandCaptions)}

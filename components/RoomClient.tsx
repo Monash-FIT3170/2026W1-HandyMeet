@@ -84,11 +84,16 @@ export default function RoomClient({
           whiteboardOpen={whiteboardOpen}
           onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
         />
-        <Captions settings={captionSettings} />
+        <Captions
+          settings={captionSettings}
+          position={whiteboardOpen ? 'whiteboard' : 'default'}
+        />
 
         <Whiteboard
           isOpen={whiteboardOpen}
           onClose={() => setWhiteboardOpen(false)}
+          captionSettings={captionSettings}
+          onCaptionSettingsChange={setCaptionSettings}
         />
       </LiveKitRoom>
     </main>
