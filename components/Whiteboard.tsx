@@ -2,8 +2,19 @@
 
 import 'tldraw/tldraw.css';
 import '@tldraw/commenting/commenting.css';
-import { useParticipants, useRoomContext } from '@livekit/components-react';
-import { ConnectionState, type Participant, RoomEvent } from 'livekit-client';
+import {
+  useParticipants,
+  useRoomContext,
+  useTracks,
+  ParticipantTile,
+  ControlBar,
+} from '@livekit/components-react';
+import {
+  ConnectionState,
+  type Participant,
+  RoomEvent,
+  Track,
+} from 'livekit-client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   commentSchemaRecords,
@@ -115,6 +126,13 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
     new Map<string, { parts: Uint8Array[]; received: number }>(),
   );
   const hasLoadedSnapshot = useRef(false);
+
+  const tracks = useTracks(
+    [{ source: Track.Source.Camera, withPlaceholder: true }],
+    { onlySubscribed: false },
+  ).filter(
+    (track) => !track.participant.identity.toLowerCase().startsWith('agent-'),
+  );
 
   useEffect(() => {
     const encoder = new TextEncoder();
@@ -607,6 +625,7 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
 
   return (
     <div className="fixed inset-x-0 bottom-0 top-0 z-50 bg-neutral-950 flex flex-col overflow-hidden">
+      {/* Header panel */}
       <div className="h-[45px] flex items-center justify-between px-4 bg-neutral-900 border-b border-neutral-800 shrink-0 select-none">
         <span
           role="status"
@@ -633,13 +652,12 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
         className="hidden"
       />
 
-      <div className="relative flex-1 w-full overflow-hidden">
+      <div className="relative flex-1 flex flex-row overflow-hidden">
+        {/* Whiteboard */}
         <div
           style={{
-            height: '100%',
-            width: '100%',
-            position: 'absolute',
-            inset: 0,
+            flex: 1,
+            position: 'relative',
           }}
         >
           <Tldraw
@@ -652,6 +670,123 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
             autoFocus
           />
         </div>
+
+        {/* Video Side Bar */}
+        <div
+          style={{
+            width: '320px',
+            borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
+            background: 'rgba(10, 10, 18, 0.95)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem',
+            padding: '1rem',
+            overflowY: 'auto',
+          }}
+        >
+          <h3
+            style={{
+              color: '#fff',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              marginBottom: '0.25rem',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              opacity: 0.8,
+            }}
+          >
+            Participants ({tracks.length})
+          </h3>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.75rem',
+            }}
+          >
+            {tracks.map((track) => (
+              <div
+                key={`${track.participant.identity}-${track.source}`}
+                style={{
+                  aspectRatio: '16/9',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  position: 'relative',
+                }}
+              >
+                <ParticipantTile trackRef={track} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Control bar footer */}
+      <div className="h-[60px] w-full flex items-center justify-between px-4 bg-neutral-900 border-t border-neutral-800 shrink-0 select-none text-neutral-300">
+        {/*  Control bar  */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0.75rem 1.75rem',
+            position: 'relative',
+            height: '100%',
+            width: '100%',
+          }}
+        >
+          {/* Gradient accent line */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '2px',
+              background:
+                'linear-gradient(90deg, transparent 0%, #10599A 20%, #7099C2 50%, #DB4C77 80%, transparent 100%)',
+              opacity: 0.9,
+            }}
+          />
+
+          <div style={{ flex: 1 }} />
+
+          {/* Centre pill */}
+          <div className="flex-initial flex items-center justify-center lk-video-conference">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+                borderRadius: '999px',
+                padding: '0.3rem 0.5rem',
+                zIndex: 999,
+              }}
+            >
+              <ControlBar
+                controls={{
+                  microphone: true,
+                  camera: true,
+                  screenShare: false,
+                  chat: false,
+                  settings: false,
+                  leave: false,
+                }}
+                style={{
+                  border: 'none',
+                  padding: 0,
+                  gap: '0.25rem',
+                  display: 'contents',
+                  alignItems: 'center',
+                }}
+              />
+            </div>
+          </div>
+          <div style={{ flex: 1 }} />
+        </div>
+        {/*  End control bar  */}
       </div>
 
       {modeRequest && (
