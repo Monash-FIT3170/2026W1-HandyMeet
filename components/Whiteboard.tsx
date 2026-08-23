@@ -50,6 +50,8 @@ import {
   type ImportMode,
   type ImportModeRequest,
 } from '@/helpers/whiteboard/svgTransfer';
+import TranscriptionSettings from '@/components/TranscriptionSettings';
+import type { CaptionSettings } from '@/components/TranscriptionSettings';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
 const CURSOR_TOPIC = 'handy-meet-whiteboard-cursors-v1';
@@ -83,6 +85,8 @@ type CursorMessage = {
 interface WhiteboardProps {
   isOpen: boolean;
   onClose: () => void;
+  captionSettings: CaptionSettings;
+  onCaptionSettingsChange: (s: CaptionSettings) => void;
 }
 
 /** A transient message shown in the whiteboard header. */
@@ -114,7 +118,12 @@ const IMPORT_ACTION_ID = 'handymeet-import-svg';
 /** Translation key backing {@link IMPORT_ACTION_ID}'s label. */
 const IMPORT_LABEL_KEY = 'handymeet.import-svg';
 
-export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
+export default function Whiteboard({
+  isOpen,
+  onClose,
+  captionSettings,
+  onCaptionSettingsChange,
+}: WhiteboardProps) {
   const room = useRoomContext();
   const [store] = useState(() =>
     createTLStore({
@@ -133,6 +142,8 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
   ).filter(
     (track) => !track.participant.identity.toLowerCase().startsWith('agent-'),
   );
+
+  const [captionsOpen, setCaptionsOpen] = useState(false);
 
   useEffect(() => {
     const encoder = new TextEncoder();
@@ -724,14 +735,14 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
       </div>
 
       {/* Control bar footer */}
-      <div className="h-[60px] w-full flex items-center justify-between px-4 bg-neutral-900 border-t border-neutral-800 shrink-0 select-none text-neutral-300">
+      <div className="h-[64px] w-full flex items-center px-4 bg-neutral-900 border-t border-neutral-800 shrink-0 select-none text-neutral-300">
         {/*  Control bar  */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0.75rem 1.75rem',
+            justifyContent: 'flex-end',
+            padding: '0.5rem 5rem 0.75rem 1.75rem',
             position: 'relative',
             height: '100%',
             width: '100%',
@@ -751,10 +762,8 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
             }}
           />
 
-          <div style={{ flex: 1 }} />
-
           {/* Centre pill */}
-          <div className="flex-initial flex items-center justify-center lk-video-conference">
+          <div className="flex-initial flex items-center justify-end lk-video-conference">
             <div
               style={{
                 display: 'flex',
@@ -782,9 +791,66 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
                   alignItems: 'center',
                 }}
               />
+
+              {/* Divider */}
+              <div
+                style={{
+                  width: '1px',
+                  height: '1.5rem',
+                  background: 'rgba(255,255,255,0.00)',
+                  margin: '0 5rem',
+                  flexShrink: 0,
+                }}
+              />
+
+              {/* Captions */}
+              <div style={{ position: 'relative' }}>
+                {captionsOpen && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 0.75rem)',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      zIndex: 9999,
+                    }}
+                  >
+                    <TranscriptionSettings
+                      settings={captionSettings}
+                      onChange={onCaptionSettingsChange}
+                      open={captionsOpen}
+                      onClose={() => setCaptionsOpen(false)}
+                    />
+                  </div>
+                )}
+                <button
+                  className="lk-button"
+                  aria-pressed={captionsOpen}
+                  onClick={() => setCaptionsOpen((v) => !v)}
+                  title="Captions"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.75}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <path d="M8 10.5h4" />
+                    <path d="M14 10.5h4" />
+                    <path d="M8 14.5h4" />
+                    <path d="M14 14.5h2" />
+                  </svg>
+                  Captions
+                </button>
+              </div>
             </div>
           </div>
-          <div style={{ flex: 1 }} />
         </div>
         {/*  End control bar  */}
       </div>
