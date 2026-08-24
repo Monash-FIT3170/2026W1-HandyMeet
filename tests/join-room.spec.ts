@@ -4,7 +4,7 @@ const BASE_URL = '/';
 
 test.describe('Given the HandyMeet landing page', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('BASE_URL');
+    await page.goto(BASE_URL);
   });
 
   test.describe('When the page initially loads', () => {
