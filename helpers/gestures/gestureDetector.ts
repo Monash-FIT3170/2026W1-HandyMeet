@@ -146,7 +146,7 @@ const qualifiesAsTwoHandGesture = (
 export const predictGestureAction = async (
   room: Room,
   featureVectors: HandFeatureVectors,
-  disconnect?: () => void,
+  requestLeave?: () => void,
 ): Promise<void> => {
   const candidates: GesturePredictionCandidate[] = [];
 
@@ -172,7 +172,7 @@ export const predictGestureAction = async (
   }
 
   if (candidates.length === 0) {
-    await processGesture(room, null, disconnect);
+    await processGesture(room, null, requestLeave);
     return;
   }
 
@@ -211,5 +211,5 @@ export const predictGestureAction = async (
       ? mapPredictedGestureToAction(chosenCandidate.prediction)
       : null;
 
-  await processGesture(room, action, disconnect);
+  await processGesture(room, action, requestLeave);
 };
