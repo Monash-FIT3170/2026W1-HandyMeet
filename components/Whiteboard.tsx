@@ -13,12 +13,15 @@ import {
   DefaultMainMenu,
   DefaultMainMenuContent,
   DefaultStylePanel,
+  InstancePresenceRecordType,
   squashRecordDiffs,
   Tldraw,
   TldrawUiMenuActionItem,
   TldrawUiMenuGroup,
   type Editor,
   type TLComponents,
+  type TLInstancePresence,
+  type TLPageId,
   type TLStoreEventInfo,
   type TLUiOverrides,
 } from 'tldraw';
@@ -38,7 +41,9 @@ import {
 } from '@/helpers/whiteboard/svgTransfer';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
+const CURSOR_TOPIC = 'handy-meet-whiteboard-cursors-v1';
 const CHUNK_SIZE = 12_000;
+const CURSOR_FLUSH_MS = 33;
 
 /**
  * How long to buffer store changes before broadcasting them, in milliseconds.
@@ -56,6 +61,14 @@ type WhiteboardMessage =
     }
   | { type: 'diff'; changes: TLStoreEventInfo['changes'] };
 
+type CursorMessage = {
+  cursor: Pick<NonNullable<TLInstancePresence['cursor']>, 'x' | 'y'> | null;
+  currentPageId: TLPageId;
+  userName: string;
+  color: string;
+  lastActivityTimestamp: number;
+};
+
 interface WhiteboardProps {
   isOpen: boolean;
   onClose: () => void;
@@ -65,6 +78,21 @@ interface WhiteboardProps {
 interface StatusMessage {
   tone: 'info' | 'error';
   text: string;
+}
+
+function participantColor(identity: string) {
+  let hash = 0;
+  for (let i = 0; i < identity.length; i += 1) {
+    hash = identity.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return `hsl(${Math.abs(hash) % 360}, 80%, 50%)`;
+}
+
+function tldrawUserId(identity: string) {
+  const namespacedIdentity = identity.startsWith('user:')
+    ? identity
+    : `user:${identity}`;
+  return namespacedIdentity as TLInstancePresence['userId'];
 }
 
 const STATUS_TIMEOUT_MS = 4000;
@@ -243,17 +271,10 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
     return participants.map((p) => {
       const isMe = p.identity === currentUserId;
 
-      let hash = 0;
-      for (let i = 0; i < p.identity.length; i++) {
-        hash = p.identity.charCodeAt(i) + ((hash << 5) - hash);
-      }
-      const hue = Math.abs(hash) % 360;
-      const color = `hsl(${hue}, 80%, 50%)`;
-
       return {
         id: p.identity,
         name: p.name || (isMe ? 'You' : p.identity),
-        color,
+        color: participantColor(p.identity),
         you: isMe,
       };
     });
@@ -277,6 +298,7 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
   }, [tldrawMembers, tldrawAuthors]);
 
   const editorRef = useRef<Editor | null>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [status, setStatus] = useState<StatusMessage | null>(null);
@@ -316,7 +338,120 @@ export default function Whiteboard({ isOpen, onClose }: WhiteboardProps) {
 
   const handleEditorMount = useCallback((editor: Editor) => {
     editorRef.current = editor;
+    setEditor(editor);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen || !editor) return;
+
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const localParticipant = room.localParticipant;
+    const identity = localParticipant.identity;
+    const userName = localParticipant.name || identity;
+    const color = participantColor(identity);
+    let lastSentAt = 0;
+    let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const publishCursor = (cursor: CursorMessage['cursor']) => {
+      const message: CursorMessage = {
+        cursor,
+        currentPageId: editor.getCurrentPageId(),
+        userName,
+        color,
+        lastActivityTimestamp: Date.now(),
+      };
+
+      void localParticipant
+        .publishData(encoder.encode(JSON.stringify(message)), {
+          reliable: false,
+          topic: CURSOR_TOPIC,
+        })
+        .catch((error) => {
+          console.error('Failed to send whiteboard cursor:', error);
+        });
+    };
+
+    const sendCurrentCursor = () => {
+      pendingTimer = null;
+      lastSentAt = Date.now();
+      const point = editor.inputs.currentPagePoint;
+      publishCursor({ x: point.x, y: point.y });
+    };
+
+    const handleEditorEvent = (event: { type: string; name: string }) => {
+      if (event.type !== 'pointer' || event.name !== 'pointer_move') return;
+
+      const remaining = CURSOR_FLUSH_MS - (Date.now() - lastSentAt);
+      if (remaining <= 0) {
+        if (pendingTimer) clearTimeout(pendingTimer);
+        sendCurrentCursor();
+      } else if (!pendingTimer) {
+        pendingTimer = setTimeout(sendCurrentCursor, remaining);
+      }
+    };
+
+    const handleCursorData = (
+      payload: Uint8Array,
+      sender?: Participant,
+      _kind?: unknown,
+      topic?: string,
+    ) => {
+      if (topic !== CURSOR_TOPIC || !sender || sender.identity === identity) {
+        return;
+      }
+
+      try {
+        const message = JSON.parse(decoder.decode(payload)) as CursorMessage;
+        // The commenting schema validates tldraw user IDs using the `user:`
+        // namespace, while LiveKit identities arrive as plain strings.
+        const userId = tldrawUserId(sender.identity);
+        const presence = InstancePresenceRecordType.create({
+          id: InstancePresenceRecordType.createId(sender.identity),
+          userId,
+          userName: message.userName || sender.name || sender.identity,
+          color: message.color || participantColor(sender.identity),
+          // Each client creates its initial tldraw page locally. When two new
+          // clients exchange snapshots at the same time, those internal page
+          // IDs can differ even though both are viewing the shared board.
+          // Presence is local-only, so anchor it to this editor's active page.
+          currentPageId: editor.getCurrentPageId(),
+          cursor: message.cursor
+            ? { ...message.cursor, type: 'default', rotation: 0 }
+            : null,
+          lastActivityTimestamp: message.lastActivityTimestamp,
+        });
+        store.mergeRemoteChanges(() => store.put([presence]));
+      } catch (error) {
+        console.error('Failed to receive whiteboard cursor:', error);
+      }
+    };
+
+    const removeParticipantCursor = (participant: Participant) => {
+      const presenceId = InstancePresenceRecordType.createId(
+        participant.identity,
+      );
+      store.mergeRemoteChanges(() => store.remove([presenceId]));
+    };
+
+    editor.on('event', handleEditorEvent);
+    room.on(RoomEvent.DataReceived, handleCursorData);
+    room.on(RoomEvent.ParticipantDisconnected, removeParticipantCursor);
+    sendCurrentCursor();
+
+    return () => {
+      editor.off('event', handleEditorEvent);
+      room.off(RoomEvent.DataReceived, handleCursorData);
+      room.off(RoomEvent.ParticipantDisconnected, removeParticipantCursor);
+      if (pendingTimer) clearTimeout(pendingTimer);
+      publishCursor(null);
+      const presenceIds = store
+        .allRecords()
+        .filter((record) => record.typeName === 'instance_presence')
+        .map((record) => record.id);
+      store.mergeRemoteChanges(() => store.remove(presenceIds));
+    };
+  }, [editor, isOpen, room, store]);
 
   // `CommentTool.configure()` returns a fresh class on every call, and tldraw
   // recreates the entire Editor whenever the contents of `tools` change
