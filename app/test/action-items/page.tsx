@@ -8,6 +8,7 @@ import {
   shouldAutoOpenActionItems,
 } from '@/helpers/actionItems';
 import type { LiveActionItem } from '@/hooks/useLiveActionItems';
+import type { ParticipantOption } from '@/hooks/useMeetingParticipants';
 
 const firstItem: LiveActionItem = {
   id: 'playwright-first-item',
@@ -26,6 +27,11 @@ const secondItem: LiveActionItem = {
   status: 'suggested',
   assigneeId: null,
 };
+
+const mockParticipants: ParticipantOption[] = [
+  { id: 'dylan', name: 'Dylan' },
+  { id: 'sam', name: 'Sam' },
+];
 
 export default function ActionItemsTestPage() {
   const [items, setItems] = useState<LiveActionItem[]>([]);
@@ -48,6 +54,31 @@ export default function ActionItemsTestPage() {
     setUnreadSuggestions((current) =>
       getNextUnreadSuggestionState(current, nextItems, nextOpen),
     );
+  }
+
+  function updateItem(id: string, patch: Partial<LiveActionItem>) {
+    setItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  }
+
+  function acceptItem(id: string, ownerName?: string) {
+    updateItem(id, {
+      status: 'accepted',
+      ...(ownerName ? { owner: ownerName } : {}),
+    });
+  }
+
+  function dismissItem(id: string) {
+    updateItem(id, { status: 'dismissed' });
+  }
+
+  function editItem(id: string, newTask: string) {
+    updateItem(id, { task: newTask });
+  }
+
+  function assignUser(id: string, assigneeId: string | null) {
+    updateItem(id, { assigneeId });
   }
 
   function expandSidebar() {
@@ -86,8 +117,13 @@ export default function ActionItemsTestPage() {
         error={null}
         unreadCount={unreadSuggestions.count}
         items={items}
+        participants={mockParticipants}
         onCollapse={() => setOpen(false)}
         onExpand={expandSidebar}
+        onAccept={acceptItem}
+        onEdit={editItem}
+        onDismiss={dismissItem}
+        onAssign={assignUser}
       />
     </main>
   );
