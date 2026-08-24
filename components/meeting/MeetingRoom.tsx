@@ -504,14 +504,6 @@ export default function MeetingRoom({
               </button>
             </div>
 
-            <button
-              className="lk-button"
-              onClick={liveActionItems.addTestItem}
-              title="Add test action item"
-            >
-              + Test item
-            </button>
-
             {/* Right  Leave */}
             <div
               style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}
