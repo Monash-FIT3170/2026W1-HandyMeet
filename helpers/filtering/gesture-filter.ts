@@ -11,7 +11,7 @@ const HOLD_TIME = 1000; // Time in ms to consider a gesture as "held"
 export async function processGesture(
   room: Room,
   detectedGesture: string | null,
-  disconnect?: () => void,
+  requestLeave?: () => void,
 ) {
   const now = Date.now();
 
@@ -31,9 +31,7 @@ export async function processGesture(
   const heldDuration = now - gestureStart;
   if (heldDuration >= HOLD_TIME && !triggered) {
     if (currentGesture === Gesture.EndCall) {
-      if (confirm('Are you sure you want to end the call?')) {
-        disconnect?.();
-      }
+      requestLeave?.();
     } else {
       await handleAction(room, currentGesture as Gesture);
     }
