@@ -2,10 +2,11 @@
 
 import '@livekit/components-styles';
 import { LiveKitRoom } from '@livekit/components-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MeetingRoom from '@/components/meeting/MeetingRoom';
 import Captions from '@/components/Captions';
+import TranscriptSummary from '@/components/TranscriptSummary';
 import {
   defaultCaptionSettings,
   type CaptionSettings,
@@ -24,7 +25,21 @@ export default function RoomClient({
   const [captionSettings, setCaptionSettings] = useState<CaptionSettings>(
     defaultCaptionSettings,
   );
+  const [callPhase, setCallPhase] = useState<'active' | 'ended'>('active');
+  const [transcriptSnapshot, setTranscriptSnapshot] = useState<string[]>([]);
+  const isLeavingRef = useRef(false);
   const router = useRouter();
+
+  const handleLeave = useCallback((transcriptLines: string[]) => {
+    isLeavingRef.current = true;
+    setTranscriptSnapshot(transcriptLines);
+    setCallPhase('ended');
+  }, []);
+
+  const handleDisconnected = useCallback(() => {
+    if (isLeavingRef.current) return;
+    router.push('/');
+  }, [router]);
 
   useEffect(() => {
     async function getToken() {
@@ -64,6 +79,17 @@ export default function RoomClient({
     );
   }
 
+  if (callPhase === 'ended') {
+    return (
+      <main className="h-screen" data-lk-theme="default">
+        <TranscriptSummary
+          transcript={transcriptSnapshot}
+          onClose={() => router.push('/')}
+        />
+      </main>
+    );
+  }
+
   return (
     <main className="h-screen" data-lk-theme="default">
       <LiveKitRoom
@@ -72,13 +98,14 @@ export default function RoomClient({
         connect={true}
         video={true}
         audio={true}
-        onDisconnected={() => router.push('/')}
+        onDisconnected={handleDisconnected}
       >
         <GestureReactionsBanner />
 
         <MeetingRoom
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
+          onLeave={handleLeave}
         />
         <Captions settings={captionSettings} />
       </LiveKitRoom>

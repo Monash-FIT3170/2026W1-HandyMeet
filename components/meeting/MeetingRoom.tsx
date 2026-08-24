@@ -28,11 +28,10 @@ import type {
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
-import TranscriptSummary from '@/components/TranscriptSummary';
+import LeaveConfirmDialog from '@/components/LeaveConfirmDialog';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import HandTrackingButton from '../button/HandTrackingButton';
@@ -90,18 +89,20 @@ function MeetingTile({
 type MeetingRoomProps = {
   captionSettings: CaptionSettings;
   onCaptionSettingsChange: (s: CaptionSettings) => void;
+  onLeave: (transcriptLines: string[]) => void;
 };
 
 export default function MeetingRoom({
   captionSettings,
   onCaptionSettingsChange,
+  onLeave,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const [trackingEnabled, setTrackingEnabled] = useState(false);
   const [overlayEnabled, setOverlayEnabled] = useState(false);
-  const [showTranscriptSummary, setShowTranscriptSummary] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
@@ -140,10 +141,8 @@ export default function MeetingRoom({
     localCanvasRef.current = canvas;
   }, []);
 
-  const router = useRouter();
-
-  const handleShowTranscriptSummary = useCallback(() => {
-    setShowTranscriptSummary(true);
+  const handleLeave = useCallback(() => {
+    setShowLeaveConfirm(true);
   }, []);
 
   const { isTracking } = useHandLandmarker({
@@ -155,11 +154,7 @@ export default function MeetingRoom({
       if (isPredictingGestureRef.current) return;
       isPredictingGestureRef.current = true;
       try {
-        await predictGestureAction(
-          room,
-          snapshot.featureVectors,
-          handleShowTranscriptSummary,
-        );
+        await predictGestureAction(room, snapshot.featureVectors, handleLeave);
       } finally {
         isPredictingGestureRef.current = false;
       }
@@ -219,14 +214,14 @@ export default function MeetingRoom({
     (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
   );
 
-  const handleLeave = useCallback(() => {
-    setShowTranscriptSummary(true);
-  }, []);
+  const confirmLeave = useCallback(() => {
+    setShowLeaveConfirm(false);
+    onLeave(transcriptLines);
+  }, [onLeave, transcriptLines]);
 
-  const handleSummaryClose = useCallback(() => {
-    setShowTranscriptSummary(false);
-    router.push('/');
-  }, [router]);
+  const cancelLeave = useCallback(() => {
+    setShowLeaveConfirm(false);
+  }, []);
 
   return (
     <div className="lk-video-conference">
@@ -452,11 +447,11 @@ export default function MeetingRoom({
             </div>
           </div>
           {/*  End control bar  */}
-          {/* Transcript summary overlay */}
-          {showTranscriptSummary && (
-            <TranscriptSummary
-              transcript={transcriptLines}
-              onClose={handleSummaryClose}
+          {/* Leave confirmation dialog */}
+          {showLeaveConfirm && (
+            <LeaveConfirmDialog
+              onConfirm={confirmLeave}
+              onCancel={cancelLeave}
             />
           )}
         </div>
