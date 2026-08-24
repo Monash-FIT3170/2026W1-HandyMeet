@@ -23,9 +23,7 @@ test.describe('Given the action item sidebar has no suggestions', () => {
     test('Then the sidebar opens and displays the suggestion', async ({
       page,
     }) => {
-      await expect(
-        page.getByText('Prepare the sprint demonstration'),
-      ).toBeVisible();
+      await expect(page.getByText('Prepare the sprint demo')).toBeVisible();
     });
 
     test.describe('When the sidebar is collapsed and another suggestion is added', () => {
