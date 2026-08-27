@@ -238,7 +238,8 @@ export default function MeetingRoom({
     (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
   );
 
-  // Polls Groq every 12s for live action items while the meeting runs.
+  // Checks for completed transcript lines every second and only calls Groq
+  // when there is new text to process.
   const liveActionItems = useLiveActionItems({
     transcriptLines,
     enabled: insightsEnabled,
