@@ -75,14 +75,14 @@ test.describe('Given a suggestion exists and mock participants are available', (
       await expect(page.getByRole('button', { name: 'Dylan' })).toBeVisible();
     });
 
-    test('Then the "Who" field still shows the LLM-suggested owner until accepted', async ({
+    test('Then the "Who" field updates to the selected participant', async ({
       page,
     }) => {
       await page.getByRole('button', { name: 'Unassigned' }).click();
       await page.getByRole('option', { name: 'Dylan' }).click();
 
-      // Assuming the mock item's LLM-guessed owner differs from the assignee
-      await expect(page.getByText('Who')).toBeVisible();
+      const whoField = page.getByText('Who', { exact: true }).locator('..');
+      await expect(whoField.getByText('Dylan', { exact: true })).toBeVisible();
     });
   });
 
@@ -116,14 +116,6 @@ test.describe('Given a suggestion exists and mock participants are available', (
       await expect(
         page.getByRole('button', { name: 'Unassigned' }),
       ).toBeVisible();
-    });
-  });
-
-  test.describe('Given a suggestion is avaliable', () => {
-    test('Then accepting the suggestion should update its status', async ({
-      page,
-    }) => {
-      await page.getByLabel;
     });
   });
 });

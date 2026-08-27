@@ -14,7 +14,7 @@ export type LiveActionItem = {
   assigneeId: string | null;
 };
 
-const POLL_INTERVAL_MS = 12000;
+const POLL_INTERVAL_MS = 1000;
 
 // Matches a line ending in sentence terminating punctuation, optionally
 // followed by a closing quote/bracket (e.g. `done."` or `right?)`).
@@ -42,7 +42,7 @@ export function useLiveActionItems({
   const [error, setError] = useState<string | null>(null);
 
   // Read via ref so the interval doesn't get torn down/recreated on every
-  // transcript update (transcriptions stream in far more often than 12s).
+  // transcript update (transcriptions stream in more often than this check).
   const transcriptLinesRef = useRef(transcriptLines);
   transcriptLinesRef.current = transcriptLines;
   const actionItemsRef = useRef<LiveActionItem[]>([]);
