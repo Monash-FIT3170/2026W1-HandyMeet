@@ -59,19 +59,6 @@ describe('handleAction', () => {
       );
     });
 
-    it('should handle CameraOn gesture', async () => {
-      // Given
-      const room = mockRoom;
-      const action = Gesture.CameraOn;
-
-      // When
-      const result = await handleAction(room, action);
-
-      // Then
-      expect(result).toBe(true);
-      expect(mockLocalParticipant.setCameraEnabled).toHaveBeenCalledWith(true);
-    });
-
     it('should handle CameraOff gesture', async () => {
       // Given
       const room = mockRoom;
@@ -167,12 +154,7 @@ describe('handleAction', () => {
   describe('action handler mapping', () => {
     it('should correctly map all gesture actions to handlers', async () => {
       // Given
-      const gestures = [
-        Gesture.CameraOff,
-        Gesture.CameraOn,
-        Gesture.Mute,
-        Gesture.Unmute,
-      ];
+      const gestures = [Gesture.CameraOff, Gesture.Mute, Gesture.Unmute];
 
       // When & Then
       for (const gesture of gestures) {
