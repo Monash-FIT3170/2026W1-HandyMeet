@@ -44,7 +44,7 @@ describe('processGesture', () => {
       await processGesture(room, Gesture.Mute);
       await processGesture(room, null);
       // Call again to verify state is clean
-      await processGesture(room, Gesture.CameraOn);
+      await processGesture(room, Gesture.CameraOff);
     });
   });
 
@@ -68,7 +68,7 @@ describe('processGesture', () => {
       // Given
       const room = mockRoom;
       const firstGesture = Gesture.Mute;
-      const secondGesture = Gesture.CameraOn;
+      const secondGesture = Gesture.CameraOff;
 
       // When
       await processGesture(room, firstGesture);
@@ -87,7 +87,7 @@ describe('processGesture', () => {
     it('should not trigger action before HOLD_TIME expires', async () => {
       // Given
       const room = mockRoom;
-      const gesture = Gesture.CameraOn;
+      const gesture = Gesture.CameraOff;
 
       // When
       await processGesture(room, gesture);
@@ -104,7 +104,7 @@ describe('processGesture', () => {
     it('should trigger action for regular gestures', async () => {
       // Given
       const room = mockRoom;
-      const gesture = Gesture.CameraOn;
+      const gesture = Gesture.CameraOff;
 
       // When
       await processGesture(room, gesture);
@@ -213,7 +213,7 @@ describe('processGesture', () => {
       // Given
       const room = mockRoom;
       const firstGesture = Gesture.Mute;
-      const secondGesture = Gesture.CameraOn;
+      const secondGesture = Gesture.CameraOff;
 
       // When
       await processGesture(room, firstGesture);
