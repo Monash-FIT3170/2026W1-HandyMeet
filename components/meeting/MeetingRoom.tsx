@@ -92,6 +92,7 @@ type MeetingRoomProps = {
   onLeave: (transcriptLines: string[]) => void;
   whiteboardOpen: boolean;
   onToggleWhiteboard: () => void;
+  onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
 };
 
 export default function MeetingRoom({
@@ -100,6 +101,7 @@ export default function MeetingRoom({
   onLeave,
   whiteboardOpen,
   onToggleWhiteboard,
+  onLocalVideoRef,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
@@ -138,9 +140,13 @@ export default function MeetingRoom({
     (track) => !isSameTrack(track, focusedTrack),
   );
 
-  const setLocalVideoRef = useCallback((video: HTMLVideoElement | null) => {
-    localVideoRef.current = video;
-  }, []);
+  const setLocalVideoRef = useCallback(
+    (video: HTMLVideoElement | null) => {
+      localVideoRef.current = video;
+      onLocalVideoRef?.(video);
+    },
+    [onLocalVideoRef],
+  );
   const setLocalCanvasRef = useCallback((canvas: HTMLCanvasElement | null) => {
     localCanvasRef.current = canvas;
   }, []);

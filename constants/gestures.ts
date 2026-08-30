@@ -9,6 +9,11 @@ export enum Gesture {
   Help = 'help',
 }
 
+export enum DrawingGesture {
+  Pointing = 'pointing',
+  Fist = 'fist',
+}
+
 export const SINGLE_HAND_CONFIDENCE_THRESHOLD = 0.9;
 export const MULTI_HAND_CONFIDENCE_THRESHOLD = 0.9;
 export const TWO_HAND_PREFERENCE_MARGIN = 0.05;

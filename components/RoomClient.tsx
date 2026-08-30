@@ -30,6 +30,7 @@ export default function RoomClient({
   const [transcriptSnapshot, setTranscriptSnapshot] = useState<string[]>([]);
   const isLeavingRef = useRef(false);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
 
   const handleLeave = useCallback((transcriptLines: string[]) => {
@@ -110,6 +111,9 @@ export default function RoomClient({
           onLeave={handleLeave}
           whiteboardOpen={whiteboardOpen}
           onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
+          onLocalVideoRef={(video) => {
+            localVideoRef.current = video;
+          }}
         />
         <Captions
           settings={captionSettings}
@@ -121,6 +125,7 @@ export default function RoomClient({
           onClose={() => setWhiteboardOpen(false)}
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
+          localVideoRef={localVideoRef}
         />
       </LiveKitRoom>
     </main>
