@@ -276,11 +276,6 @@ export default function MeetingRoom({
     setShowLeaveConfirm(false);
   }, []);
 
-  const handleSummaryClose = useCallback(() => {
-    setShowTranscriptSummary(false);
-    router.push('/');
-  }, [router]);
-
   const participants = useMeetingParticipants();
 
   return (
