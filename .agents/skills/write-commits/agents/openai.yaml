@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Write Commits'
+  short_description: 'Enforce repo commit message standards'
+  default_prompt: 'Use $write-commits to create a compliant commit message for my staged changes.'

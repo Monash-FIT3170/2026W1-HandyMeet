@@ -1,4 +1,5 @@
 import { Editor, createShapeId } from 'tldraw';
+import { b64Vecs } from '@tldraw/tlschema';
 import type { DrawingStroke } from '@/hooks/useGestureDrawing';
 
 export function addStrokeToTldraw(
@@ -39,6 +40,8 @@ export function addStrokeToTldraw(
     z: p.z,
   }));
 
+  const encodedPath = b64Vecs.encodePoints(localPoints, 3);
+
   editor.createShape({
     id: createShapeId(),
     type: 'draw',
@@ -48,7 +51,7 @@ export function addStrokeToTldraw(
       segments: [
         {
           type: 'free',
-          points: localPoints,
+          path: encodedPath,
         },
       ],
       color: 'blue',

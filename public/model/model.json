@@ -26,7 +26,7 @@
               "sparse": false,
               "ragged": false,
               "name": "input_layer",
-              "batch_input_shape": [null, 126]
+              "batch_input_shape": [null, 172]
             }
           },
           {
@@ -42,7 +42,7 @@
                 },
                 "registered_name": null
               },
-              "units": 128,
+              "units": 512,
               "activation": "relu",
               "use_bias": true,
               "kernel_initializer": {
@@ -96,7 +96,7 @@
                 },
                 "registered_name": null
               },
-              "units": 64,
+              "units": 256,
               "activation": "relu",
               "use_bias": true,
               "kernel_initializer": {
@@ -150,7 +150,61 @@
                 },
                 "registered_name": null
               },
-              "units": 17,
+              "units": 128,
+              "activation": "relu",
+              "use_bias": true,
+              "kernel_initializer": {
+                "module": "keras.initializers",
+                "class_name": "GlorotUniform",
+                "config": {
+                  "seed": null
+                },
+                "registered_name": null
+              },
+              "bias_initializer": {
+                "module": "keras.initializers",
+                "class_name": "Zeros",
+                "config": {},
+                "registered_name": null
+              },
+              "kernel_regularizer": null,
+              "bias_regularizer": null,
+              "kernel_constraint": null,
+              "bias_constraint": null
+            }
+          },
+          {
+            "class_name": "Dropout",
+            "config": {
+              "name": "dropout_2",
+              "trainable": true,
+              "dtype": {
+                "module": "keras",
+                "class_name": "DTypePolicy",
+                "config": {
+                  "name": "float32"
+                },
+                "registered_name": null
+              },
+              "rate": 0.2,
+              "seed": null,
+              "noise_shape": null
+            }
+          },
+          {
+            "class_name": "Dense",
+            "config": {
+              "name": "dense_3",
+              "trainable": true,
+              "dtype": {
+                "module": "keras",
+                "class_name": "DTypePolicy",
+                "config": {
+                  "name": "float32"
+                },
+                "registered_name": null
+              },
+              "units": 44,
               "activation": "softmax",
               "use_bias": true,
               "kernel_initializer": {
@@ -174,7 +228,7 @@
             }
           }
         ],
-        "build_input_shape": [null, 126]
+        "build_input_shape": [null, 172]
       }
     },
     "training_config": {
@@ -186,11 +240,11 @@
       "steps_per_execution": 1,
       "jit_compile": false,
       "optimizer_config": {
-        "class_name": "Adam",
+        "class_name": "AdamW",
         "config": {
-          "name": "adam",
-          "learning_rate": 0.0010000000474974513,
-          "weight_decay": null,
+          "name": "adamw",
+          "learning_rate": 9.999999747378752e-6,
+          "weight_decay": 0.0001,
           "clipnorm": null,
           "global_clipnorm": null,
           "clipvalue": null,
@@ -213,32 +267,42 @@
       "weights": [
         {
           "name": "dense/kernel",
-          "shape": [126, 128],
+          "shape": [172, 512],
           "dtype": "float32"
         },
         {
           "name": "dense/bias",
-          "shape": [128],
+          "shape": [512],
           "dtype": "float32"
         },
         {
           "name": "dense_1/kernel",
-          "shape": [128, 64],
+          "shape": [512, 256],
           "dtype": "float32"
         },
         {
           "name": "dense_1/bias",
-          "shape": [64],
+          "shape": [256],
           "dtype": "float32"
         },
         {
           "name": "dense_2/kernel",
-          "shape": [64, 17],
+          "shape": [256, 128],
           "dtype": "float32"
         },
         {
           "name": "dense_2/bias",
-          "shape": [17],
+          "shape": [128],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_3/kernel",
+          "shape": [128, 44],
+          "dtype": "float32"
+        },
+        {
+          "name": "dense_3/bias",
+          "shape": [44],
           "dtype": "float32"
         }
       ]

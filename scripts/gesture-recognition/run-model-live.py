@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pyright: basic
 from __future__ import annotations
 
 import json
@@ -6,7 +7,7 @@ import math
 import sys
 import time
 from pathlib import Path
-from typing import TypedDict, TypeAlias
+from typing import TypeAlias, TypedDict
 
 import cv2
 import mediapipe as mp
@@ -16,10 +17,8 @@ import tensorflow as tf
 from mediapipe.tasks.python.components.containers.category import Category
 from mediapipe.tasks.python.components.containers.landmark import NormalizedLandmark
 from mediapipe.tasks.python.vision.hand_landmarker import (
-    HandLandmarker,
     HandLandmarkerResult,
 )
-
 
 ROOT_DIR = Path(__file__).resolve().parent
 MODEL_PATH = ROOT_DIR / "model.h5"
@@ -28,6 +27,20 @@ HAND_LANDMARKER_PATH = ROOT_DIR / "training_data" / "hand_landmarker.task"
 SINGLE_HAND_CONFIDENCE_THRESHOLD = 0.9
 TWO_HAND_PREFERENCE_THRESHOLD = 0.8
 HAND_FEATURE_COUNT = 21 * 3
+HAND_ENGINEERED_COUNT = 10
+GLOBAL_FEATURES_SENTINEL = 10.0
+
+# MediaPipe Hands 21-landmark indices
+WRIST = 0
+THUMB_TIP = 4
+INDEX_TIP = 8
+MIDDLE_MCP = 9
+MIDDLE_TIP = 12
+RING_TIP = 16
+PINKY_TIP = 20
+
+_FINGER_NAMES = ("thumb", "index", "middle", "ring", "pinky")
+_FINGER_TIPS = (THUMB_TIP, INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP)
 
 HandLandmarks: TypeAlias = list[NormalizedLandmark]
 HandAssignments: TypeAlias = dict[str, HandLandmarks]
@@ -61,8 +74,97 @@ def get_scale(landmarks: HandLandmarks) -> float:
     return scale
 
 
+# ---------------------------------------------------------------------------
+# Vector / geometry helpers
+# ---------------------------------------------------------------------------
+
+
+def _landmark_to_xyz(lm: NormalizedLandmark) -> np.ndarray:
+    return np.array(
+        [
+            get_coordinate(lm.x, "x"),
+            get_coordinate(lm.y, "y"),
+            get_coordinate(lm.z, "z"),
+        ],
+        dtype=np.float64,
+    )
+
+
+def vector(a: NormalizedLandmark, b: NormalizedLandmark) -> np.ndarray:
+    return _landmark_to_xyz(b) - _landmark_to_xyz(a)
+
+
+def distance(a: NormalizedLandmark, b: NormalizedLandmark) -> float:
+    return float(np.linalg.norm(vector(a, b)))
+
+
+def palm_center(landmarks: HandLandmarks) -> np.ndarray:
+    """Midpoint of wrist and middle MCP as palm centre proxy."""
+    return (
+        _landmark_to_xyz(landmarks[WRIST]) + _landmark_to_xyz(landmarks[MIDDLE_MCP])
+    ) / 2.0
+
+
+# ---------------------------------------------------------------------------
+# Engineered feature extractors
+# ---------------------------------------------------------------------------
+
+
+def extract_fingertip_distances(landmarks: HandLandmarks, scale: float) -> list[float]:
+    """
+    Pairwise Euclidean distances between all fingertip pairs.
+
+    Returns 10 values in order:
+      thumb-index, thumb-middle, thumb-ring, thumb-pinky,
+      index-middle, index-ring, index-pinky,
+      middle-ring, middle-pinky,
+      ring-pinky.
+    """
+    tips = [landmarks[idx] for idx in _FINGER_TIPS]
+    dists: list[float] = []
+    for i in range(len(tips)):
+        for j in range(i + 1, len(tips)):
+            dists.append(distance(tips[i], tips[j]) / scale)
+    return dists
+
+
+def extract_opposite_hand_fingertip_distances(
+    left_landmarks: HandLandmarks,
+    right_landmarks: HandLandmarks,
+    scale: float,
+) -> list[float]:
+    """Pairwise distances between every left and right fingertip.
+
+    Returns 25 values: for each left finger (thumb..pinky),
+    distance to each right finger (thumb..pinky).
+    """
+    left_tips = [left_landmarks[idx] for idx in _FINGER_TIPS]
+    right_tips = [right_landmarks[idx] for idx in _FINGER_TIPS]
+    dists: list[float] = []
+    for lt in left_tips:
+        for rt in right_tips:
+            dists.append(distance(lt, rt) / scale)
+    return dists
+
+
+def extract_engineered_features(landmarks: HandLandmarks, scale: float) -> list[float]:
+    """
+    All deterministic geometric features derived from a single hand.
+
+    Returns a flat list:
+      fingertip_distances
+    """
+    features: list[float] = []
+    features.extend(extract_fingertip_distances(landmarks, scale))
+    return features
+
+
 def empty_hand_features() -> list[float]:
     return [0.0] * HAND_FEATURE_COUNT
+
+
+def empty_engineered_features() -> list[float]:
+    return [0.0] * HAND_ENGINEERED_COUNT
 
 
 def get_primary_handedness_label(classifications: list[Category]) -> str | None:
@@ -89,7 +191,9 @@ def assign_hands(results: HandLandmarkerResult) -> HandAssignments:
 
     handedness_results = list(getattr(results, "handedness", []))
     for index, landmarks in enumerate(results.hand_landmarks):
-        classifications = handedness_results[index] if index < len(handedness_results) else []
+        classifications = (
+            handedness_results[index] if index < len(handedness_results) else []
+        )
         label = get_primary_handedness_label(classifications)
         score = float(classifications[0].score or 0.0) if classifications else 0.0
 
@@ -104,8 +208,10 @@ def assign_hands(results: HandLandmarkerResult) -> HandAssignments:
     resolved = {label: landmarks for label, (_, landmarks) in assigned.items()}
 
     if unlabeled:
-        remaining_labels = [label for label in ("left", "right") if label not in resolved]
-        unlabeled.sort(key=lambda landmarks: landmarks[0].x)
+        remaining_labels = [
+            label for label in ("left", "right") if label not in resolved
+        ]
+        unlabeled.sort(key=lambda landmarks: landmarks[0].x)  # pyright: ignore[reportCallIssue, reportArgumentType]
         for label, landmarks in zip(remaining_labels, unlabeled):
             resolved[label] = landmarks
 
@@ -156,6 +262,30 @@ def build_feature_vector(
         if right_landmarks is not None
         else empty_hand_features()
     )
+    features.extend(
+        extract_engineered_features(left_landmarks, scale)
+        if left_landmarks is not None
+        else empty_engineered_features()
+    )
+    features.extend(
+        extract_engineered_features(right_landmarks, scale)
+        if right_landmarks is not None
+        else empty_engineered_features()
+    )
+
+    if left_landmarks is not None and right_landmarks is not None:
+        hands_dist = float(
+            np.linalg.norm(palm_center(left_landmarks) - palm_center(right_landmarks))
+        )
+        opposite_dists = extract_opposite_hand_fingertip_distances(
+            left_landmarks, right_landmarks, scale
+        )
+        global_features = [hands_dist, *opposite_dists]
+    else:
+        global_features = [
+            GLOBAL_FEATURES_SENTINEL
+        ] * 26  # 1 hands_distance + 25 cross-hand
+    features.extend(global_features)
 
     return np.asarray([features], dtype=np.float32)
 
@@ -194,10 +324,8 @@ def load_gesture_names(labels_path: Path) -> list[str]:
 def format_probabilities(
     probabilities: npt.NDArray[np.float32], gesture_names: list[str]
 ) -> str:
-    return ", ".join(
-        f"{name}: {probability * 100:.1f}%"
-        for name, probability in zip(gesture_names, probabilities)
-    )
+    sorted_zipped = sorted(zip(probabilities, gesture_names), reverse=True)[:5]
+    return ", ".join(f"{gesture}: {prob * 100:.1f}%" for prob, gesture in sorted_zipped)
 
 
 def main() -> int:
@@ -212,7 +340,9 @@ def main() -> int:
         return 1
 
     if not HAND_LANDMARKER_PATH.exists():
-        print(f"Hand Landmarker model not found: {HAND_LANDMARKER_PATH}", file=sys.stderr)
+        print(
+            f"Hand Landmarker model not found: {HAND_LANDMARKER_PATH}", file=sys.stderr
+        )
         return 1
 
     model = tf.keras.models.load_model(MODEL_PATH)
@@ -259,7 +389,7 @@ def main() -> int:
                     assigned_hands = assign_hands(results)
                     left_landmarks = assigned_hands.get("left")
                     right_landmarks = assigned_hands.get("right")
-                    candidates: list[dict[str, object]] = []
+                    candidates: list[PredictionCandidate] = []
 
                     try:
                         if left_landmarks is not None:

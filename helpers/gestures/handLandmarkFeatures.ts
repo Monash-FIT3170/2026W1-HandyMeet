@@ -1,7 +1,7 @@
 import type { Category, NormalizedLandmark } from '@mediapipe/tasks-vision';
 
 const LANDMARK_COUNT = 21;
-const VALUES_PER_HAND = LANDMARK_COUNT * 3;
+export const VALUES_PER_HAND = LANDMARK_COUNT * 3;
 
 export const HAND_FEATURE_VECTOR_LENGTH = VALUES_PER_HAND * 2;
 
