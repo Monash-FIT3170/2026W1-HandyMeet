@@ -1,5 +1,4 @@
 import { Editor, createShapeId } from 'tldraw';
-import { b64Vecs } from '@tldraw/tlschema';
 import type { DrawingStroke } from '@/hooks/useGestureDrawing';
 
 export function addStrokeToTldraw(
@@ -11,28 +10,34 @@ export function addStrokeToTldraw(
   if (stroke.length < 2) return;
 
   const camera = editor.getCamera();
-  const viewportBounds = editor.getViewportScreenBounds();
 
+  // screenX/screenY are already relative to the tldraw container's own
+  // top-left (GestureDrawingOverlay and the Tldraw component both fill the
+  // same containerRef with position:absolute; inset:0), which is the same
+  // origin editor.getViewportScreenBounds() would subtract out, so no
+  // separate viewport offset needs to be applied here.
   const pagePoints = stroke.map((point) => {
     const screenX = point.x * canvasWidth;
     const screenY = point.y * canvasHeight;
 
-    const pageX = (screenX - viewportBounds.x) / camera.z - camera.x;
-    const pageY = (screenY - viewportBounds.y) / camera.z - camera.y;
+    const pageX = screenX / camera.z - camera.x;
+    const pageY = screenY / camera.z - camera.y;
 
     return { x: pageX, y: pageY, z: 0.5 };
   });
 
-  const minX = Math.min(...pagePoints.map((p) => p.x));
-  const minY = Math.min(...pagePoints.map((p) => p.y));
+  let minX = Infinity;
+  let minY = Infinity;
+  for (const p of pagePoints) {
+    if (p.x < minX) minX = p.x;
+    if (p.y < minY) minY = p.y;
+  }
 
   const localPoints = pagePoints.map((p) => ({
     x: p.x - minX,
     y: p.y - minY,
     z: p.z,
   }));
-
-  const encodedPath = b64Vecs.encodePoints(localPoints, 3);
 
   editor.createShape({
     id: createShapeId(),
@@ -43,7 +48,7 @@ export function addStrokeToTldraw(
       segments: [
         {
           type: 'free',
-          path: encodedPath,
+          points: localPoints,
         },
       ],
       color: 'blue',

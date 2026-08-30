@@ -70,7 +70,7 @@ export default function Whiteboard({
 
   const { isDrawing, cursorPosition, currentGesture } = useGestureDrawing({
     videoRef: localVideoRef,
-    enabled: gestureDrawingEnabled && isCameraEnabled,
+    enabled: isOpen && gestureDrawingEnabled && isCameraEnabled,
     onStrokeComplete: handleStrokeComplete,
     onStrokeUpdate: handleStrokeUpdate,
   });
