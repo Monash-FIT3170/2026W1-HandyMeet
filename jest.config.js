@@ -14,16 +14,7 @@ const config = {
   },
   collectCoverageFrom: ['helpers/**/*.ts', '!**/*.d.ts', '!**/node_modules/**'],
   coveragePathIgnorePatterns: ['/node_modules/'],
-  setupFilesAfterEnv: [],
-  globals: {
-    'ts-jest': {
-      tsconfig: {
-        jsx: 'react',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
-    },
-  },
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
 
 module.exports = config;

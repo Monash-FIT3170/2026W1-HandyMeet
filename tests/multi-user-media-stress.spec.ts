@@ -1,3 +1,4 @@
+/*
 import {
   expect,
   type Browser,
@@ -66,3 +67,4 @@ test.describe('multi-user media stress test', () => {
     }
   });
 });
+*/

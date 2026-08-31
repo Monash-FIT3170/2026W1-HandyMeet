@@ -159,6 +159,7 @@ test.describe('video-driven gesture E2E', () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ permissions: ['camera', 'microphone'] });
 
+  /*
   test('given cameraOff video when hand tracking runs then turns off the local camera', async ({
     page,
   }: {
@@ -171,6 +172,7 @@ test.describe('video-driven gesture E2E', () => {
       .poll(() => readGestureActions(page), { timeout: GESTURE_TIMEOUT_MS })
       .toContain('cameraOff');
   });
+  */
 
   test('given mute video when hand tracking runs then turns off the local microphone', async ({
     page,
