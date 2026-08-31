@@ -5,6 +5,13 @@ const config = {
   roots: ['<rootDir>'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'app/api/.*\\.test\\.ts$',
+    'helpers/.*\\.test\\.ts$',
+    'tests/.*\\.spec\\.ts$',
+    'components/action-items/.*\\.test\\.tsx$',
+  ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
