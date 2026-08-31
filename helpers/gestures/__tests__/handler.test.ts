@@ -1,3 +1,5 @@
+/** @jest-environment jsdom */
+
 import type { Room, LocalParticipant } from 'livekit-client';
 import { handleAction } from '@/helpers/gestures/handler';
 import { Gesture } from '@/constants/gestures';
@@ -125,7 +127,6 @@ describe('handleAction', () => {
 
       // When
       const result = await handleAction(room, action);
-      await new Promise((resolve) => setImmediate(resolve)); // Wait for async handler
 
       // Then
       expect(result).toBe(true);
