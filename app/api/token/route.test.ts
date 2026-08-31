@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
 import { NextRequest } from 'next/server';
 import { GET } from './route';
 
@@ -42,48 +40,50 @@ async function withLiveKitEnv<T>(
   }
 }
 
-test('returns 400 when room is missing', async () => {
-  const response = await GET(tokenRequest({ username: 'sam' }));
+describe('GET /api/token', () => {
+  test('returns 400 when room is missing', async () => {
+    const response = await GET(tokenRequest({ username: 'sam' }));
 
-  assert.equal(response.status, 400);
-  const body = await response.json();
-  assert.match(body.error, /Missing room or username/);
-});
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/Missing room or username/);
+  });
 
-test('returns 400 when username is missing', async () => {
-  const response = await GET(tokenRequest({ room: 'standup' }));
+  test('returns 400 when username is missing', async () => {
+    const response = await GET(tokenRequest({ room: 'standup' }));
 
-  assert.equal(response.status, 400);
-  const body = await response.json();
-  assert.match(body.error, /Missing room or username/);
-});
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/Missing room or username/);
+  });
 
-test('returns 500 when LiveKit server credentials are not configured', async () => {
-  const response = await withLiveKitEnv({}, () =>
-    GET(tokenRequest({ room: 'standup', username: 'sam' })),
-  );
+  test('returns 500 when LiveKit server credentials are not configured', async () => {
+    const response = await withLiveKitEnv({}, () =>
+      GET(tokenRequest({ room: 'standup', username: 'sam' })),
+    );
 
-  assert.equal(response.status, 500);
-  const body = await response.json();
-  assert.match(body.error, /LiveKit server not configured/);
-});
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toMatch(/LiveKit server not configured/);
+  });
 
-test('issues a signed access token scoped to the requested room and identity', async () => {
-  const response = await withLiveKitEnv(
-    { apiKey: 'test-key', apiSecret: 'test-secret' },
-    () => GET(tokenRequest({ room: 'standup', username: 'sam' })),
-  );
+  test('issues a signed access token scoped to the requested room and identity', async () => {
+    const response = await withLiveKitEnv(
+      { apiKey: 'test-key', apiSecret: 'test-secret' },
+      () => GET(tokenRequest({ room: 'standup', username: 'sam' })),
+    );
 
-  assert.equal(response.status, 200);
-  const body = await response.json();
+    expect(response.status).toBe(200);
+    const body = await response.json();
 
-  // A JWT is three base64url segments separated by dots.
-  assert.match(body.token, /^[\w-]+\.[\w-]+\.[\w-]+$/);
+    // A JWT is three base64url segments separated by dots.
+    expect(body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
 
-  const payload = JSON.parse(
-    Buffer.from(body.token.split('.')[1], 'base64url').toString('utf8'),
-  );
-  assert.equal(payload.sub, 'sam');
-  assert.equal(payload.video.room, 'standup');
-  assert.equal(payload.video.roomJoin, true);
+    const payload = JSON.parse(
+      Buffer.from(body.token.split('.')[1], 'base64url').toString('utf8'),
+    );
+    expect(payload.sub).toBe('sam');
+    expect(payload.video.room).toBe('standup');
+    expect(payload.video.roomJoin).toBe(true);
+  });
 });
