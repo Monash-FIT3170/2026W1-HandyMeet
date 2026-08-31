@@ -1,5 +1,4 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
+import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { LiveActionItem } from '@/hooks/useLiveActionItems';
 import ActionItemCard from './ActionItemCard';
@@ -13,41 +12,43 @@ const actionItem: LiveActionItem = {
   assigneeId: null,
 };
 
-test('renders Who and Task for an action item', () => {
-  const markup = renderToStaticMarkup(<ActionItemCard item={actionItem} />);
+describe('ActionItemCard', () => {
+  test('renders Who and Task for an action item', () => {
+    const markup = renderToStaticMarkup(<ActionItemCard item={actionItem} />);
 
-  assert.match(markup, />Who</);
-  assert.match(markup, /Avery/);
-  assert.match(markup, />Task</);
-  assert.match(markup, /Prepare the sprint demonstration/);
-});
+    expect(markup).toMatch(/>Who</);
+    expect(markup).toMatch(/Avery/);
+    expect(markup).toMatch(/>Task</);
+    expect(markup).toMatch(/Prepare the sprint demonstration/);
+  });
 
-test('renders a due date only when one is supplied', () => {
-  const withDueDate = renderToStaticMarkup(
-    <ActionItemCard item={{ ...actionItem, dueDate: '2026-08-14' }} />,
-  );
-  const withoutDueDate = renderToStaticMarkup(
-    <ActionItemCard item={actionItem} />,
-  );
+  test('renders a due date only when one is supplied', () => {
+    const withDueDate = renderToStaticMarkup(
+      <ActionItemCard item={{ ...actionItem, dueDate: '2026-08-14' }} />,
+    );
+    const withoutDueDate = renderToStaticMarkup(
+      <ActionItemCard item={actionItem} />,
+    );
 
-  assert.match(withDueDate, /2026-08-14/);
-  assert.doesNotMatch(withoutDueDate, />Due</);
-});
+    expect(withDueDate).toMatch(/2026-08-14/);
+    expect(withoutDueDate).not.toMatch(/>Due</);
+  });
 
-test('renders action controls for a suggested item', () => {
-  const markup = renderToStaticMarkup(<ActionItemCard item={actionItem} />);
+  test('renders action controls for a suggested item', () => {
+    const markup = renderToStaticMarkup(<ActionItemCard item={actionItem} />);
 
-  assert.match(markup, />Accept</);
-  assert.match(markup, />Edit</);
-  assert.match(markup, />Dismiss</);
-});
+    expect(markup).toMatch(/>Accept</);
+    expect(markup).toMatch(/>Edit</);
+    expect(markup).toMatch(/>Dismiss</);
+  });
 
-test('keeps action controls off accepted items', () => {
-  const markup = renderToStaticMarkup(
-    <ActionItemCard item={{ ...actionItem, status: 'accepted' }} />,
-  );
+  test('keeps action controls off accepted items', () => {
+    const markup = renderToStaticMarkup(
+      <ActionItemCard item={{ ...actionItem, status: 'accepted' }} />,
+    );
 
-  assert.doesNotMatch(markup, />Accept</);
-  assert.doesNotMatch(markup, />Edit</);
-  assert.doesNotMatch(markup, />Dismiss</);
+    expect(markup).not.toMatch(/>Accept</);
+    expect(markup).not.toMatch(/>Edit</);
+    expect(markup).not.toMatch(/>Dismiss</);
+  });
 });

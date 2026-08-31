@@ -5,15 +5,12 @@ const config = {
   roots: ['<rootDir>'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    'app/api/.*\\.test\\.ts$',
-    'helpers/.*\\.test\\.ts$',
-    'tests/.*\\.spec\\.ts$',
-    'components/action-items/.*\\.test\\.tsx$',
-  ],
+  testPathIgnorePatterns: ['tests/.*\\.spec\\.ts$'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+  },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
   collectCoverageFrom: ['helpers/**/*.ts', '!**/*.d.ts', '!**/node_modules/**'],
   coveragePathIgnorePatterns: ['/node_modules/'],

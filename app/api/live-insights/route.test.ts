@@ -1,5 +1,3 @@
-import assert from 'node:assert/strict';
-import test from 'node:test';
 import { NextRequest } from 'next/server';
 import { POST } from './route';
 
@@ -43,63 +41,67 @@ async function withApiKey<T>(
   }
 }
 
-test('returns 500 when GROQ_API_KEY is not configured', async (t) => {
-  t.mock.method(globalThis, 'fetch', async () => {
-    throw new Error('fetch should not be called');
+describe('POST /api/live-insights', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
-  const response = await withApiKey(undefined, () =>
-    POST(postRequest({ transcript: 'We will ship on Friday.' })),
-  );
+  test('returns 500 when GROQ_API_KEY is not configured', async () => {
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      throw new Error('fetch should not be called');
+    });
 
-  assert.equal(response.status, 500);
-  const body = await response.json();
-  assert.match(body.error, /GROQ_API_KEY/);
-});
+    const response = await withApiKey(undefined, () =>
+      POST(postRequest({ transcript: 'We will ship on Friday.' })),
+    );
 
-test('returns the parsed action items on a successful Groq response', async (t) => {
-  const expectedItems = [
-    { task: 'Send the report', owner: 'Sam', dueDate: '2026-08-21' },
-  ];
-  t.mock.method(globalThis, 'fetch', async () => groqSuccess(expectedItems));
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.error).toMatch(/GROQ_API_KEY/);
+  });
 
-  const response = await withApiKey('test-key', () =>
-    POST(
-      postRequest({
-        transcript: "I'll send the report by Friday.",
-        knownActionItems: [],
-      }),
-    ),
-  );
+  test('returns the parsed action items on a successful Groq response', async () => {
+    const expectedItems = [
+      { task: 'Send the report', owner: 'Sam', dueDate: '2026-08-21' },
+    ];
+    jest
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () => groqSuccess(expectedItems));
 
-  assert.equal(response.status, 200);
-  const body = await response.json();
-  assert.deepEqual(body.newActionItems, expectedItems);
-});
+    const response = await withApiKey('test-key', () =>
+      POST(
+        postRequest({
+          transcript: "I'll send the report by Friday.",
+          knownActionItems: [],
+        }),
+      ),
+    );
 
-test('sends the transcript and known items to Groq in the prompt', async (t) => {
-  let capturedBody: { messages: Array<{ content: string }> } | undefined;
-  t.mock.method(
-    globalThis,
-    'fetch',
-    async (_input: RequestInfo | URL, init?: RequestInit) => {
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.newActionItems).toEqual(expectedItems);
+  });
+
+  test('sends the transcript and known items to Groq in the prompt', async () => {
+    let capturedBody: { messages: Array<{ content: string }> } | undefined;
+    jest.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
       capturedBody = JSON.parse(init?.body as string);
       return groqSuccess([]);
-    },
-  );
+    });
 
-  await withApiKey('test-key', () =>
-    POST(
-      postRequest({
-        transcript: 'New transcript line.',
-        knownActionItems: [
-          { task: 'Existing task', owner: null, dueDate: null },
-        ],
-      }),
-    ),
-  );
+    await withApiKey('test-key', () =>
+      POST(
+        postRequest({
+          transcript: 'New transcript line.',
+          knownActionItems: [
+            { task: 'Existing task', owner: null, dueDate: null },
+          ],
+        }),
+      ),
+    );
 
-  const prompt = capturedBody?.messages[0]?.content ?? '';
-  assert.match(prompt, /New transcript line\./);
-  assert.match(prompt, /Existing task/);
+    const prompt = capturedBody?.messages[0]?.content ?? '';
+    expect(prompt).toMatch(/New transcript line\./);
+    expect(prompt).toMatch(/Existing task/);
+  });
 });
