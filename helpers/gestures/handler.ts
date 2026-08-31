@@ -59,6 +59,9 @@ export const handleAction = async (
     return false;
   }
   await handler(room);
+  window.dispatchEvent(
+    new CustomEvent('handymeet:gesture-action', { detail: { action } }),
+  );
 
   return true;
 };
