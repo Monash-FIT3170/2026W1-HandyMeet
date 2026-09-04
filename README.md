@@ -30,8 +30,8 @@ This will build the required container images. Subsequent runs after building th
 
 ### Architecture
 
-- Next.js: The web application is built on Next.js, handling the UI, while also offering a simple backend to manage rooms
-- LiveKit agent: a Python based agent that joins meetings server side to provide real time transcription (via Deepgram) and generates post meeting summaries (via Gemini)
+- Next.js: The web application is built on Next.js, handling the UI, while also offering a simple backend to manage rooms and routing
+- LiveKit agent: a TypeScript based agent that joins meetings server side to provide real time transcription (via Deepgram) and generates post meeting summaries (via Gemini)
 
 ### Environment & Secrets
 
