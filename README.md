@@ -1,14 +1,56 @@
 # 2026W1-HandyMeet
 
+### Project Overview
+
+HandyMeet is a real time video conferencing platform built with accessibility as its focus, offering features such as gesture controls, live captions and sign-language interpretation. It's designed for people who face barriers with existing video conferencing tools, such as people with audio or visual impairments, as well as general users through features like automatic meeting summaries and live action item generation.
+
+## Current Features
+
+- Live video conferencing through LiveKit
+- Meeting chat and screen sharing
+- Live speech transcription and captions
+- Browser-side hand tracking and gesture recognistion using MediaPipe and a TensorFlow.js model
+- Integrated tldraw whiteboard synchronised through LiveKit
+- Live Action-item extraction using Groq
+- Post-meeting transcript summary using Gemini
+
+## Requirements
+
+- Docker, used to build and run the application locally (https://www.docker.com/get-started/)
+- Accounts and API keys for the following services (see Environment & Secrets below): LiveKit Cloud, Deepgram, Google AI Studio (Gemini), Groq, tldraw
+
 ## How to run
 
-The application can by run by executing
+1. Create a .env.local file in the project root and include the necessary environment variables (listed below)
+2. The application can be built and run locally using Docker by executing:
 
 `docker compose up --build`
 
-This will build the required container images.
+This will build the required container images. Subsequent runs after building the image (without changes) can be run without the `--build` flag
 
-Subsequent runs (without changes) can be run without the `--build` flag
+### Architecture
+
+- Next.js: The web application is built on Next.js, handling the UI, while also offering a simple backend to manage rooms
+- LiveKit agent: a Python based agent that joins meetings server side to provide real time transcription (via Deepgram) and generates post meeting summaries (via Gemini)
+
+### Environment & Secrets
+
+| Variable                                  | Purpose                       | Source                  |
+| ----------------------------------------- | ----------------------------- | ----------------------- |
+| `LIVEKIT_URL` / `NEXT_PUBLIC_LIVEKIT_URL` | LiveKit project WebSocket URL | LiveKit Cloud dashboard |
+| `LIVEKIT_API_KEY` / `LIVEKIT_API_SECRET`  | LiveKit project auth          | LiveKit Cloud dashboard |
+| `DEEPGRAM_API_KEY`                        | Transcription agent STT       | Deepgram dashboard      |
+| `GEMINI_API_KEY`                          | Transcript summary            | Google AI Studio        |
+| `NEXT_PUBLIC_TLDRAW_LICENSE_KEY`          | Whiteboard (tldraw) license   | tldraw                  |
+| `GROQ_API_KEY`                            | Live Action item detection    | GroqCloud               |
+
+- Local dev: set these in `.env.local`
+- CI/deploy: stored as GitHub **Environment secrets** on the `production` environment
+
+## Notes for Future Developers
+
+- The Next.js app deploys through Vercel and the LiveKit agent deploys through LiveKit Cloud. Details on deploying and maintaining the agent can be found in the LiveKit Cloud docs and .github/workflows/deploy-agent.yml
+- Unit tests are currently utilising react-test-render, which is now deprecated
 
 ## Team Member Contacts
 
