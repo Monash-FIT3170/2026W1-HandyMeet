@@ -569,23 +569,25 @@ export default function MeetingRoom({
         <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
       </LayoutContextProvider>
 
-      <ActionItemSidebar
-        open={actionItemSidebarOpen}
-        chatOpen={widgetState.showChat}
-        isLoading={liveActionItems.isLoading}
-        error={liveActionItems.error}
-        unreadCount={unreadSuggestions.count}
-        items={liveActionItems.actionItems}
-        onCollapse={() => setActionItemsOpen(false)}
-        onExpand={() => setActionItemsOpen(true)}
-        onAccept={liveActionItems.acceptItem}
-        onEdit={(id, newTask) =>
-          liveActionItems.editItem(id, { task: newTask })
-        }
-        onDismiss={liveActionItems.dismissItem}
-        onAssign={liveActionItems.assignUser}
-        participants={participants}
-      />
+      {insightsEnabled && (
+        <ActionItemSidebar
+          open={actionItemSidebarOpen}
+          chatOpen={widgetState.showChat}
+          isLoading={liveActionItems.isLoading}
+          error={liveActionItems.error}
+          unreadCount={unreadSuggestions.count}
+          items={liveActionItems.actionItems}
+          onCollapse={() => setActionItemsOpen(false)}
+          onExpand={() => setActionItemsOpen(true)}
+          onAccept={liveActionItems.acceptItem}
+          onEdit={(id, newTask) =>
+            liveActionItems.editItem(id, { task: newTask })
+          }
+          onDismiss={liveActionItems.dismissItem}
+          onAssign={liveActionItems.assignUser}
+          participants={participants}
+        />
+      )}
 
       <RoomAudioRenderer />
       <StartAudio label="Click to allow audio playback" />
