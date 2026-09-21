@@ -13,9 +13,9 @@ import { DrawingGesture } from '@/constants/gestures';
 export type DrawingPoint = { x: number; y: number };
 export type DrawingStroke = DrawingPoint[];
 
-const SMOOTHING_WINDOW = 5;
+const SMOOTHING_WINDOW = 3;
 const STABILITY_FRAMES_REQUIRED = 4;
-const JUMP_THRESHOLD = 0.15;
+const JUMP_THRESHOLD = 0.3;
 
 type HandState = {
   positionHistory: DrawingPoint[];
@@ -86,7 +86,7 @@ export function useGestureDrawing({
         baseOptions: {
           modelAssetPath:
             'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-          delegate: 'GPU',
+          delegate: 'CPU',
         },
         runningMode: 'VIDEO',
         numHands: 2,
