@@ -17,6 +17,97 @@ const SMOOTHING_WINDOW = 3;
 const STABILITY_FRAMES_REQUIRED = 4;
 const JUMP_THRESHOLD = 0.3;
 
+const WASM_URL =
+  'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm';
+const MODEL_ASSET_PATH =
+  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+// frames used to benchmark each delegate at startup
+const BENCHMARK_FRAMES = 5;
+// give up waiting for video and fall back to CPU after this long
+const VIDEO_READY_TIMEOUT_MS = 3000;
+
+async function createLandmarker(
+  vision: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>,
+  delegate: 'GPU' | 'CPU',
+) {
+  // mediapipe logs a benign init message via console.error, which trips
+  // Next's dev error overlay - filter just that one line
+  const originalConsoleError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('XNNPACK delegate for CPU')
+    ) {
+      return;
+    }
+    originalConsoleError(...args);
+  };
+
+  try {
+    return await HandLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: MODEL_ASSET_PATH,
+        delegate,
+      },
+      runningMode: 'VIDEO',
+      numHands: 2,
+    });
+  } finally {
+    console.error = originalConsoleError;
+  }
+}
+
+function waitForVideoReady(
+  videoRef: React.RefObject<HTMLVideoElement | null>,
+  timeoutMs: number,
+): Promise<HTMLVideoElement | null> {
+  return new Promise((resolve) => {
+    const start = performance.now();
+
+    function check() {
+      const video = videoRef.current;
+      if (video && video.readyState >= 2) {
+        resolve(video);
+        return;
+      }
+      if (performance.now() - start > timeoutMs) {
+        resolve(null);
+        return;
+      }
+      requestAnimationFrame(check);
+    }
+
+    check();
+  });
+}
+
+// times detectForVideo for one delegate, closing it before returning so we
+// never have two landmarkers alive at once (that crashes)
+async function benchmarkDelegate(
+  vision: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>,
+  video: HTMLVideoElement,
+  delegate: 'GPU' | 'CPU',
+  isCancelled: () => boolean,
+): Promise<number | null> {
+  const landmarker = await createLandmarker(vision, delegate);
+
+  if (isCancelled()) {
+    landmarker.close();
+    return null;
+  }
+
+  const timings: number[] = [];
+  for (let i = 0; i < BENCHMARK_FRAMES; i++) {
+    const start = performance.now();
+    landmarker.detectForVideo(video, performance.now());
+    timings.push(performance.now() - start);
+  }
+
+  landmarker.close();
+
+  return timings.reduce((sum, t) => sum + t, 0) / timings.length;
+}
+
 type HandState = {
   positionHistory: DrawingPoint[];
   gestureStability: number;
@@ -77,29 +168,62 @@ export function useGestureDrawing({
   }, [enabled]);
 
   useEffect(() => {
-    async function createHandLandmarker() {
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm',
-      );
+    let cancelled = false;
+    const isCancelled = () => cancelled;
 
-      landmarkerRef.current = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-          delegate: 'CPU',
-        },
-        runningMode: 'VIDEO',
-        numHands: 2,
-      });
+    async function createHandLandmarker() {
+      const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+      if (cancelled) return;
+
+      const video = await waitForVideoReady(videoRef, VIDEO_READY_TIMEOUT_MS);
+      if (cancelled) return;
+
+      // fallback if we can't benchmark
+      let chosenDelegate: 'GPU' | 'CPU' = 'CPU';
+
+      if (video) {
+        const gpuAvgMs = await benchmarkDelegate(
+          vision,
+          video,
+          'GPU',
+          isCancelled,
+        );
+        if (cancelled) return;
+
+        const cpuAvgMs = await benchmarkDelegate(
+          vision,
+          video,
+          'CPU',
+          isCancelled,
+        );
+        if (cancelled) return;
+
+        if (gpuAvgMs !== null && cpuAvgMs !== null) {
+          chosenDelegate = gpuAvgMs <= cpuAvgMs ? 'GPU' : 'CPU';
+        }
+
+        console.log(
+          `[gesture-drawing] delegate benchmark: GPU=${gpuAvgMs?.toFixed(1)}ms CPU=${cpuAvgMs?.toFixed(1)}ms -> using ${chosenDelegate}`,
+        );
+      }
+
+      const landmarker = await createLandmarker(vision, chosenDelegate);
+      if (cancelled) {
+        landmarker.close();
+        return;
+      }
+
+      landmarkerRef.current = landmarker;
     }
 
     createHandLandmarker();
 
     return () => {
+      cancelled = true;
       landmarkerRef.current?.close();
       landmarkerRef.current = null;
     };
-  }, []);
+  }, [videoRef]);
 
   const resetState = useCallback(() => {
     setCursorPosition(null);
