@@ -58,6 +58,7 @@ import {
   useGestureDrawing,
   type DrawingStroke,
 } from '@/hooks/useGestureDrawing';
+import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
@@ -736,16 +737,20 @@ export default function Whiteboard({
 
           {gestureDrawingEnabled && isCameraEnabled && (
             <div className="flex items-center gap-2 text-xs text-neutral-400">
-              {isDrawing && (
+              {currentGesture === DrawingGesture.Pointing && (
                 <span className="flex items-center gap-1 text-blue-400">
                   <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                   Drawing...
                 </span>
               )}
-              {!isDrawing && cursorPosition && (
-                <span className="text-neutral-500">
-                  Make a fist with your other hand to draw
+              {currentGesture === DrawingGesture.Fist && (
+                <span className="flex items-center gap-1 text-green-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" />
+                  Saved to canvas
                 </span>
+              )}
+              {!currentGesture && cursorPosition && (
+                <span className="text-neutral-500">Point finger to draw</span>
               )}
             </div>
           )}
@@ -834,12 +839,12 @@ export default function Whiteboard({
               <p className="font-semibold mb-2 text-white">Gesture Controls</p>
               <div className="space-y-1">
                 <p className="flex items-center gap-2">
-                  <span className="text-blue-400">One hand</span>
-                  <span className="text-neutral-500">= Move cursor</span>
+                  <span className="text-blue-400">Point finger</span>
+                  <span className="text-neutral-500">= Draw</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-green-400">Other hand: fist</span>
-                  <span className="text-neutral-500">= Draw</span>
+                  <span className="text-green-400">Make fist</span>
+                  <span className="text-neutral-500">= Save stroke</span>
                 </p>
               </div>
               <p className="mt-2 text-neutral-500 text-[10px]">
