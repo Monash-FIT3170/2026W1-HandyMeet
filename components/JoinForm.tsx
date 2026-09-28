@@ -10,17 +10,25 @@ function generateRoomCode(): string {
 const inputClass =
   'w-full bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-3 text-neutral-100 text-[15px] outline-none focus:border-primary-500 transition-colors placeholder:text-neutral-600';
 
+type Mode = 'select' | 'create' | 'join';
+
 export default function JoinForm() {
+  const [mode, setMode] = useState<Mode>('select');
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const router = useRouter();
 
+  function goBack() {
+    setMode('select');
+    setRoomCode('');
+  }
+
   function createRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
     if (!username.trim()) return;
-    const code = generateRoomCode();
+    const code = roomCode.trim() || generateRoomCode();
     router.push(
-      `/room/${code}?username=${encodeURIComponent(username.trim())}`,
+      `/room/${encodeURIComponent(code)}?username=${encodeURIComponent(username.trim())}`,
     );
   }
 
@@ -92,51 +100,121 @@ export default function JoinForm() {
             </p>
           </div>
 
-          <h2 className="text-xl font-bold text-neutral-100 mb-1">
-            Get started
-          </h2>
-          <p className="text-neutral-600 text-sm mb-8">
-            Create a new meeting or join one with a room code.
-          </p>
-
-          <div className="flex flex-col gap-3">
-            <input
-              className={inputClass}
-              type="text"
-              placeholder="Your name"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              maxLength={50}
-              autoComplete="off"
-            />
-
+          {mode !== 'select' && (
             <button
               type="button"
-              disabled={!canCreate}
-              onClick={createRoom}
-              className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = '#E88DA8')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = '#DB4C77')
-              }
+              onClick={goBack}
+              className="text-neutral-600 hover:text-neutral-300 text-sm mb-4 transition-colors cursor-pointer"
             >
-              Create Meeting
+              ← Back
             </button>
+          )}
 
-            <div className="flex items-center gap-3 my-1">
-              <div className="h-px flex-1 bg-neutral-800" />
-              <span className="text-xs uppercase tracking-wide text-neutral-600">
-                or
-              </span>
-              <div className="h-px flex-1 bg-neutral-800" />
+          <h2 className="text-xl font-bold text-neutral-100 mb-1">
+            {mode === 'select' && 'Get started'}
+            {mode === 'create' && 'Create a meeting'}
+            {mode === 'join' && 'Join a meeting'}
+          </h2>
+          <p className="text-neutral-600 text-sm mb-8">
+            {mode === 'select' &&
+              'Create a new meeting or join one with a room code.'}
+            {mode === 'create' &&
+              "Choose a room code, or leave it blank and we'll generate one."}
+            {mode === 'join' &&
+              'Enter the room code your host shared with you.'}
+          </p>
+
+          {mode === 'select' && (
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => setMode('create')}
+                className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors cursor-pointer"
+                style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#E88DA8')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#DB4C77')
+                }
+              >
+                Create Meeting
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode('join')}
+                className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold border transition-colors cursor-pointer"
+                style={{ borderColor: '#DB4C77', color: '#F1B7C9' }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor =
+                    'rgba(219, 76, 119, 0.1)')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = 'transparent')
+                }
+              >
+                Join Meeting
+              </button>
             </div>
+          )}
 
-            <div className="flex gap-2">
+          {mode === 'create' && (
+            <div className="flex flex-col gap-3">
               <input
-                className={`${inputClass} flex-1 min-w-0`}
+                className={inputClass}
+                type="text"
+                placeholder="Your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                maxLength={50}
+                autoComplete="off"
+                autoFocus
+              />
+
+              <input
+                className={inputClass}
+                type="text"
+                placeholder="Room code (optional)"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                maxLength={20}
+                autoComplete="off"
+              />
+
+              <button
+                type="button"
+                disabled={!canCreate}
+                onClick={createRoom}
+                className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#E88DA8')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#DB4C77')
+                }
+              >
+                Create Meeting
+              </button>
+            </div>
+          )}
+
+          {mode === 'join' && (
+            <div className="flex flex-col gap-3">
+              <input
+                className={inputClass}
+                type="text"
+                placeholder="Your name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                maxLength={50}
+                autoComplete="off"
+                autoFocus
+              />
+
+              <input
+                className={inputClass}
                 type="text"
                 placeholder="Room code"
                 value={roomCode}
@@ -144,25 +222,24 @@ export default function JoinForm() {
                 maxLength={20}
                 autoComplete="off"
               />
-            </div>
 
-            <button
-              type="button"
-              disabled={!canJoin}
-              onClick={joinRoom}
-              className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              style={{ borderColor: '#DB4C77', color: '#F1B7C9' }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  'rgba(219, 76, 119, 0.1)')
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = 'transparent')
-              }
-            >
-              Join Meeting
-            </button>
-          </div>
+              <button
+                type="button"
+                disabled={!canJoin}
+                onClick={joinRoom}
+                className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#E88DA8')
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = '#DB4C77')
+                }
+              >
+                Join Meeting
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
