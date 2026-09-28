@@ -15,24 +15,25 @@ export default function JoinForm() {
   const [roomCode, setRoomCode] = useState('');
   const router = useRouter();
 
-  function joinRoom(e: React.BaseSyntheticEvent) {
+  function createRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
     if (!username.trim()) return;
-    if (!roomCode.trim()) {
-      // Create a random room code and join that room
-      const code = generateRoomCode();
-      router.push(
-        `/room/${code}?username=${encodeURIComponent(username.trim())}`,
-      );
-    } else {
-      // Join the specified room
-      router.push(
-        `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
-      );
-    }
+    const code = generateRoomCode();
+    router.push(
+      `/room/${code}?username=${encodeURIComponent(username.trim())}`,
+    );
   }
 
-  const canAct = username.trim().length > 0;
+  function joinRoom(e: React.BaseSyntheticEvent) {
+    e.preventDefault();
+    if (!username.trim() || !roomCode.trim()) return;
+    router.push(
+      `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
+    );
+  }
+
+  const canCreate = username.trim().length > 0;
+  const canJoin = username.trim().length > 0 && roomCode.trim().length > 0;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -95,7 +96,7 @@ export default function JoinForm() {
             Get started
           </h2>
           <p className="text-neutral-600 text-sm mb-8">
-            Join an existing room or create your own.
+            Create a new meeting or join one with a room code.
           </p>
 
           <div className="flex flex-col gap-3">
@@ -108,6 +109,30 @@ export default function JoinForm() {
               maxLength={50}
               autoComplete="off"
             />
+
+            <button
+              type="button"
+              disabled={!canCreate}
+              onClick={createRoom}
+              className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = '#E88DA8')
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = '#DB4C77')
+              }
+            >
+              Create Meeting
+            </button>
+
+            <div className="flex items-center gap-3 my-1">
+              <div className="h-px flex-1 bg-neutral-800" />
+              <span className="text-xs uppercase tracking-wide text-neutral-600">
+                or
+              </span>
+              <div className="h-px flex-1 bg-neutral-800" />
+            </div>
 
             <div className="flex gap-2">
               <input
@@ -123,18 +148,19 @@ export default function JoinForm() {
 
             <button
               type="button"
-              disabled={!canAct}
+              disabled={!canJoin}
               onClick={joinRoom}
-              className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-              style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
+              className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold border transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+              style={{ borderColor: '#DB4C77', color: '#F1B7C9' }}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = '#E88DA8')
+                (e.currentTarget.style.backgroundColor =
+                  'rgba(219, 76, 119, 0.1)')
               }
               onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = '#DB4C77')
+                (e.currentTarget.style.backgroundColor = 'transparent')
               }
             >
-              Join Room
+              Join Meeting
             </button>
           </div>
         </div>
