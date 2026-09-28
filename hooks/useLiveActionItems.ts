@@ -1,7 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { cleanTranscriptLines } from '@/helpers/transcript';
+import type { DataPacket_Kind, Participant, Room } from 'livekit-client';
+import { RoomEvent } from 'livekit-client';
+import {
+  isLiveInsightsUpdate,
+  LIVE_INSIGHTS_TOPIC,
+} from '@/helpers/liveInsightsProtocol';
 
 export type ActionItemStatus = 'suggested' | 'accepted' | 'dismissed';
 
@@ -14,171 +19,69 @@ export type LiveActionItem = {
   assigneeId: string | null;
 };
 
-const POLL_INTERVAL_MS = 1000;
-
-// Matches a line ending in sentence terminating punctuation, optionally
-// followed by a closing quote/bracket (e.g. `done."` or `right?)`).
-const SENTENCE_END_RE = /[.!?][")\]]?$/;
-
-function isLineComplete(line: string): boolean {
-  return SENTENCE_END_RE.test(line.trim());
-}
-
 function makeId(): string {
   return crypto.randomUUID();
 }
 
 type UseLiveActionItemsOptions = {
-  transcriptLines: string[];
+  room?: Room;
+  transcriptLines?: string[];
   enabled?: boolean;
 };
 
-export function useLiveActionItems({
-  transcriptLines,
-  enabled = true,
-}: UseLiveActionItemsOptions) {
+export function useLiveActionItems({ room }: UseLiveActionItemsOptions = {}) {
   const [actionItems, setActionItems] = useState<LiveActionItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Read via ref so the interval doesn't get torn down/recreated on every
-  // transcript update (transcriptions stream in more often than this check).
-  const transcriptLinesRef = useRef(transcriptLines);
-  transcriptLinesRef.current = transcriptLines;
   const actionItemsRef = useRef<LiveActionItem[]>([]);
-  const isFetchingRef = useRef(false);
-
-  const sentLineCountRef = useRef(0);
-  const sentTrailingLineRef = useRef('');
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!room) return;
 
-    const tick = async () => {
-      if (isFetchingRef.current) return;
-
-      const cleaned = cleanTranscriptLines(transcriptLinesRef.current);
-      if (cleaned.length === 0) return;
-
-      const trailingLineRevised =
-        sentLineCountRef.current > 0 &&
-        cleaned[sentLineCountRef.current - 1] !== sentTrailingLineRef.current;
-      const startIndex = trailingLineRevised
-        ? sentLineCountRef.current - 1
-        : sentLineCountRef.current;
-
-      let delta = cleaned.slice(startIndex);
-      if (delta.length === 0) return;
-
-      const trailingIncomplete = !isLineComplete(delta[delta.length - 1]);
-      if (trailingIncomplete) {
-        delta = delta.slice(0, -1);
+    const handleData = (
+      payload: Uint8Array,
+      sender?: Participant,
+      _kind?: DataPacket_Kind,
+      topic?: string,
+    ) => {
+      if (
+        topic !== LIVE_INSIGHTS_TOPIC ||
+        !sender?.identity.toLowerCase().startsWith('agent-')
+      ) {
+        return;
       }
-      if (delta.length === 0) return;
-
-      const sentUpToIndex = trailingIncomplete
-        ? cleaned.length - 1
-        : cleaned.length;
-
-      isFetchingRef.current = true;
-      setIsLoading(true);
-      setError(null);
 
       try {
-        // Strip client-only fields before sending back - the
-        // prompt only needs task/owner/dueDate to recognise repeats.
-        const knownActionItems = actionItemsRef.current.map(
-          ({ task, owner, dueDate }) => ({ task, owner, dueDate }),
-        );
+        const data: unknown = JSON.parse(new TextDecoder().decode(payload));
+        if (!isLiveInsightsUpdate(data)) return;
 
-        const response = await fetch('/api/live-insights', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            transcript: delta.join('\n'),
-            knownActionItems,
-          }),
-        });
+        const currentItems = actionItemsRef.current;
+        const nextItems = data.actionItems.map((item, index) => {
+          const existingItem = currentItems[index];
+          if (existingItem) return existingItem;
 
-        if (!response.ok) {
-          throw new Error(`Live insights request failed (${response.status})`);
-        }
-
-        const data = await response.json();
-        const rawNewItems: Array<{
-          task: string;
-          owner: string | null;
-          dueDate: string | null;
-        }> = Array.isArray(data.newActionItems) ? data.newActionItems : [];
-
-        if (rawNewItems.length > 0) {
-          const newActionItems: LiveActionItem[] = rawNewItems.map((item) => ({
+          return {
             ...item,
             id: makeId(),
-            status: 'suggested',
+            status: 'suggested' as const,
             assigneeId: null,
-          }));
+          };
+        });
 
-          actionItemsRef.current = [
-            ...actionItemsRef.current,
-            ...newActionItems,
-          ];
-          setActionItems(actionItemsRef.current);
-        }
-
-        sentLineCountRef.current = sentUpToIndex;
-        sentTrailingLineRef.current = cleaned[sentUpToIndex - 1];
+        actionItemsRef.current = nextItems;
+        setActionItems(nextItems);
+        setError(null);
       } catch (err) {
-        console.error('Live action item extraction failed:', err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to extract action items.',
-        );
-      } finally {
-        isFetchingRef.current = false;
-        setIsLoading(false);
+        console.error('Failed to parse live insight update:', err);
+        setError('Failed to receive live action items.');
       }
     };
 
-    // On meeting end, beacon whatever transcript is still unsent (including any
-    // unfinished trailing line). sendBeacon survives a hard unload tab close
-    // or refresh where a normal fetch and this effect's cleanup never run.
-    const flushFinal = () => {
-      const cleaned = cleanTranscriptLines(transcriptLinesRef.current);
-      if (cleaned.length === 0) return;
-
-      const startIndex =
-        sentLineCountRef.current > 0 &&
-        cleaned[sentLineCountRef.current - 1] !== sentTrailingLineRef.current
-          ? sentLineCountRef.current - 1
-          : sentLineCountRef.current;
-
-      const delta = cleaned.slice(startIndex);
-      if (delta.length === 0) return;
-
-      const knownActionItems = actionItemsRef.current.map(
-        ({ task, owner, dueDate }) => ({ task, owner, dueDate }),
-      );
-      const body = JSON.stringify({
-        transcript: delta.join('\n'),
-        knownActionItems,
-      });
-      navigator.sendBeacon(
-        '/api/live-insights',
-        new Blob([body], { type: 'application/json' }),
-      );
-    };
-
-    const intervalId = setInterval(tick, POLL_INTERVAL_MS);
-    window.addEventListener('pagehide', flushFinal);
+    room.on(RoomEvent.DataReceived, handleData);
 
     return () => {
-      clearInterval(intervalId);
-      window.removeEventListener('pagehide', flushFinal);
-      flushFinal();
+      room.off(RoomEvent.DataReceived, handleData);
     };
-  }, [enabled]);
+  }, [room]);
 
   function updateItem(id: string, patch: Partial<LiveActionItem>) {
     actionItemsRef.current = actionItemsRef.current.map((item) =>
@@ -211,7 +114,7 @@ export function useLiveActionItems({
 
   return {
     actionItems,
-    isLoading,
+    isLoading: false,
     error,
     acceptItem,
     dismissItem,
