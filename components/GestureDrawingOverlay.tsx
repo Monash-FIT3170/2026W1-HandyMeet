@@ -56,12 +56,16 @@ export default function GestureDrawingOverlay({
 
       ctx.beginPath();
       ctx.arc(x, y, isDrawing ? 8 : 12, 0, Math.PI * 2);
-      ctx.fillStyle = isDrawing
-        ? 'rgba(59, 130, 246, 0.8)'
-        : 'rgba(255, 255, 255, 0.6)';
-      ctx.fill();
 
-      ctx.strokeStyle = isDrawing ? '#2563eb' : '#ffffff';
+      if (isDrawing) {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
+        ctx.fill();
+        ctx.strokeStyle = '#2563eb';
+      } else {
+        // Hollow ring instead of a filled dot, so it stays visible on the
+        // whiteboard's light background when not drawing.
+        ctx.strokeStyle = '#f97316';
+      }
       ctx.lineWidth = 2;
       ctx.stroke();
 
