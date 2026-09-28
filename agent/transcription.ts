@@ -7,6 +7,16 @@ import {
 } from '@livekit/agents';
 import * as deepgram from '@livekit/agents-plugin-deepgram';
 import { fileURLToPath } from 'node:url';
+import {
+  extractLiveActionItems,
+  type LiveInsightActionItem,
+} from '../helpers/liveInsights';
+import {
+  LIVE_INSIGHTS_MESSAGE_TYPE,
+  LIVE_INSIGHTS_TOPIC,
+} from '../helpers/liveInsightsProtocol';
+
+const COLLECTION_DELAY_MS = 1000;
 
 function createTranscriptionSession() {
   return new voice.AgentSession({
@@ -21,6 +31,81 @@ export default defineAgent({
     await ctx.connect();
 
     const sessions = new Map<string, voice.AgentSession>();
+    const pendingTranscriptLines: string[] = [];
+    const knownActionItems: LiveInsightActionItem[] = [];
+    let collectionTimer: ReturnType<typeof setTimeout> | undefined;
+    let collectionInFlight = false;
+
+    const publishActionItems = async () => {
+      const agentParticipant = ctx.agent;
+      if (!agentParticipant) {
+        throw new Error('Agent participant is unavailable.');
+      }
+
+      const message = JSON.stringify({
+        type: LIVE_INSIGHTS_MESSAGE_TYPE,
+        actionItems: knownActionItems,
+      });
+
+      await agentParticipant.publishData(new TextEncoder().encode(message), {
+        reliable: true,
+        topic: LIVE_INSIGHTS_TOPIC,
+      });
+    };
+
+    const collectActionItems = async () => {
+      if (collectionInFlight || pendingTranscriptLines.length === 0) return;
+
+      const transcriptLines = pendingTranscriptLines.splice(0);
+      const apiKey = process.env.GROQ_API_KEY;
+
+      if (!apiKey) {
+        console.error(
+          'Live insight collection skipped: GROQ_API_KEY is missing.',
+        );
+        return;
+      }
+
+      collectionInFlight = true;
+      const previousItemCount = knownActionItems.length;
+
+      try {
+        const newActionItems = await extractLiveActionItems({
+          transcript: transcriptLines.join('\n'),
+          knownActionItems,
+          apiKey,
+        });
+
+        if (newActionItems.length === 0) return;
+
+        knownActionItems.push(...newActionItems);
+        await publishActionItems();
+      } catch (error) {
+        knownActionItems.splice(previousItemCount);
+        pendingTranscriptLines.unshift(...transcriptLines);
+        console.error('Live action item collection failed:', error);
+      } finally {
+        collectionInFlight = false;
+        scheduleCollection();
+      }
+    };
+
+    const scheduleCollection = () => {
+      if (collectionTimer || pendingTranscriptLines.length === 0) return;
+
+      collectionTimer = setTimeout(() => {
+        collectionTimer = undefined;
+        void collectActionItems();
+      }, COLLECTION_DELAY_MS);
+    };
+
+    const queueTranscript = (participantIdentity: string, text: string) => {
+      const transcript = text.trim();
+      if (!transcript) return;
+
+      pendingTranscriptLines.push(`${participantIdentity}: ${transcript}`);
+      scheduleCollection();
+    };
 
     const startTranscribingParticipant = async (
       participantIdentity: string,
@@ -29,6 +114,11 @@ export default defineAgent({
 
       const session = createTranscriptionSession();
       sessions.set(participantIdentity, session);
+
+      session.on(voice.AgentSessionEventTypes.UserInputTranscribed, (event) => {
+        if (!event.isFinal) return;
+        queueTranscript(participantIdentity, event.transcript);
+      });
 
       await session.start({
         agent: new voice.Agent({
