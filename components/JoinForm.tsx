@@ -16,11 +16,14 @@ export default function JoinForm() {
   const [mode, setMode] = useState<Mode>('select');
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  const [joinError, setJoinError] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
   const router = useRouter();
 
   function goBack() {
     setMode('select');
     setRoomCode('');
+    setJoinError('');
   }
 
   function createRoom(e: React.BaseSyntheticEvent) {
@@ -32,16 +35,39 @@ export default function JoinForm() {
     );
   }
 
-  function joinRoom(e: React.BaseSyntheticEvent) {
+  async function joinRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
-    if (!username.trim() || !roomCode.trim()) return;
-    router.push(
-      `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
-    );
+    const trimmedCode = roomCode.trim();
+    if (!username.trim() || !trimmedCode) return;
+
+    setJoinError('');
+    setIsJoining(true);
+    try {
+      const res = await fetch(
+        `/api/room-exists?room=${encodeURIComponent(trimmedCode)}`,
+      );
+      const data = (await res.json()) as { exists?: boolean };
+
+      if (!res.ok || !data.exists) {
+        setJoinError(
+          `No meeting found with code "${trimmedCode}". Check the code and try again.`,
+        );
+        return;
+      }
+
+      router.push(
+        `/room/${encodeURIComponent(trimmedCode)}?username=${encodeURIComponent(username.trim())}`,
+      );
+    } catch {
+      setJoinError('Could not verify the room code. Please try again.');
+    } finally {
+      setIsJoining(false);
+    }
   }
 
   const canCreate = username.trim().length > 0;
-  const canJoin = username.trim().length > 0 && roomCode.trim().length > 0;
+  const canJoin =
+    username.trim().length > 0 && roomCode.trim().length > 0 && !isJoining;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -218,10 +244,19 @@ export default function JoinForm() {
                 type="text"
                 placeholder="Room code"
                 value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setRoomCode(e.target.value.toUpperCase());
+                  setJoinError('');
+                }}
                 maxLength={20}
                 autoComplete="off"
               />
+
+              {joinError && (
+                <p className="text-sm" style={{ color: '#F1B7C9' }}>
+                  {joinError}
+                </p>
+              )}
 
               <button
                 type="button"
@@ -236,7 +271,7 @@ export default function JoinForm() {
                   (e.currentTarget.style.backgroundColor = '#DB4C77')
                 }
               >
-                Join Meeting
+                {isJoining ? 'Checking...' : 'Join Meeting'}
               </button>
             </div>
           )}
