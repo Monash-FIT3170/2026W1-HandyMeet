@@ -1,48 +1,23 @@
 import { test, expect } from '@playwright/test';
 
 const LIVE_ACTION_ITEMS_URL = '/test/live-action-items';
-const TEST_TRANSCRIPT = "Param: I'll prepare the release notes.";
 const SUGGESTED_TASK = 'Prepare the release notes';
 
-test.describe('Given a completed transcript line contains an action item', () => {
+test.describe('Given the agent publishes an action item update', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route('**/api/live-insights', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          newActionItems: [
-            {
-              task: SUGGESTED_TASK,
-              owner: 'Param',
-              dueDate: null,
-            },
-          ],
-        }),
-      });
-    });
-
     await page.goto(LIVE_ACTION_ITEMS_URL);
   });
 
-  test.describe('When live insights processes the transcript', () => {
+  test.describe('When the client receives the update', () => {
     test('Then the suggestion appears in the sidebar within five seconds', async ({
       page,
     }) => {
-      const requestPromise = page.waitForRequest('**/api/live-insights');
-
       await page
-        .getByRole('button', { name: 'Add completed transcript line' })
+        .getByRole('button', { name: 'Simulate agent action item update' })
         .click();
 
       await expect(page.getByText(SUGGESTED_TASK)).toBeVisible({
         timeout: 5_000,
-      });
-
-      const request = await requestPromise;
-      expect(request.postDataJSON()).toMatchObject({
-        transcript: TEST_TRANSCRIPT,
-        knownActionItems: [],
       });
     });
   });
