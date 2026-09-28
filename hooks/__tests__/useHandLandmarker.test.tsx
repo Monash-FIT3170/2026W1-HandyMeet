@@ -1,5 +1,7 @@
+/** @jest-environment jsdom */
+
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import { act, render } from '@testing-library/react';
 import { useHandLandmarker } from '../useHandLandmarker';
 import {
   HandLandmarker,
@@ -90,26 +92,19 @@ function renderHookHarness(options: HookOptions) {
     latest = result;
   };
 
-  let renderer: TestRenderer.ReactTestRenderer;
-  act(() => {
-    renderer = TestRenderer.create(
-      <HookHarness options={options} onResult={onResult} />,
-    );
-  });
+  const rendered = render(
+    <HookHarness options={options} onResult={onResult} />,
+  );
 
   return {
     getResult: () => latest,
     rerender: (nextOptions: HookOptions) => {
-      act(() => {
-        renderer.update(
-          <HookHarness options={nextOptions} onResult={onResult} />,
-        );
-      });
+      rendered.rerender(
+        <HookHarness options={nextOptions} onResult={onResult} />,
+      );
     },
     unmount: () => {
-      act(() => {
-        renderer.unmount();
-      });
+      rendered.unmount();
     },
   };
 }
