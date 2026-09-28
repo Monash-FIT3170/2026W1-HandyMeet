@@ -1,5 +1,7 @@
+/** @jest-environment jsdom */
+
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import { act, render } from '@testing-library/react';
 import { RoomEvent } from 'livekit-client';
 import type { Room, Participant } from 'livekit-client';
 import { useIncomingReaction } from '../useIncomingReaction';
@@ -56,24 +58,15 @@ function renderHookHarness(room: Room | undefined) {
     latest = result;
   };
 
-  let renderer: TestRenderer.ReactTestRenderer;
-  act(() => {
-    renderer = TestRenderer.create(
-      <HookHarness room={room} onResult={onResult} />,
-    );
-  });
+  const rendered = render(<HookHarness room={room} onResult={onResult} />);
 
   return {
     getResult: () => latest,
     rerender: (nextRoom: Room | undefined) => {
-      act(() => {
-        renderer.update(<HookHarness room={nextRoom} onResult={onResult} />);
-      });
+      rendered.rerender(<HookHarness room={nextRoom} onResult={onResult} />);
     },
     unmount: () => {
-      act(() => {
-        renderer.unmount();
-      });
+      rendered.unmount();
     },
   };
 }
