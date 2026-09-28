@@ -281,11 +281,9 @@ export default function MeetingRoom({
     [buildTranscriptLines],
   );
 
-  // Checks for completed transcript lines every second and only calls Groq
-  // when there is new text to process.
+  // The LiveKit agent owns extraction and broadcasts updates to every client.
   const liveActionItems = useLiveActionItems({
-    transcriptLines,
-    enabled: insightsEnabled,
+    room,
   });
   const autoOpenActionItems = shouldAutoOpenActionItems(
     hasAutoOpenedActionItemsRef.current,
