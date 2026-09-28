@@ -13,6 +13,7 @@ import {
 } from '../helpers/liveInsights';
 import {
   LIVE_INSIGHTS_MESSAGE_TYPE,
+  isLiveInsightsSnapshotRequest,
   LIVE_INSIGHTS_TOPIC,
 } from '../helpers/liveInsightsProtocol';
 
@@ -36,7 +37,7 @@ export default defineAgent({
     let collectionTimer: ReturnType<typeof setTimeout> | undefined;
     let collectionInFlight = false;
 
-    const publishActionItems = async () => {
+    const publishActionItems = async (destinationIdentity?: string) => {
       const agentParticipant = ctx.agent;
       if (!agentParticipant) {
         throw new Error('Agent participant is unavailable.');
@@ -50,8 +51,32 @@ export default defineAgent({
       await agentParticipant.publishData(new TextEncoder().encode(message), {
         reliable: true,
         topic: LIVE_INSIGHTS_TOPIC,
+        ...(destinationIdentity
+          ? { destination_identities: [destinationIdentity] }
+          : {}),
       });
     };
+
+    ctx.room.on('dataReceived', (payload, participant, _kind, topic) => {
+      if (
+        topic !== LIVE_INSIGHTS_TOPIC ||
+        !participant ||
+        participant.identity.toLowerCase().startsWith('agent-')
+      ) {
+        return;
+      }
+
+      try {
+        const message: unknown = JSON.parse(new TextDecoder().decode(payload));
+        if (!isLiveInsightsSnapshotRequest(message)) return;
+
+        void publishActionItems(participant.identity).catch((error) => {
+          console.error('Live action item snapshot failed:', error);
+        });
+      } catch (error) {
+        console.error('Failed to parse live insight request:', error);
+      }
+    });
 
     const collectActionItems = async () => {
       if (collectionInFlight || pendingTranscriptLines.length === 0) return;

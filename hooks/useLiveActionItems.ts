@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { DataPacket_Kind, Participant, Room } from 'livekit-client';
-import { RoomEvent } from 'livekit-client';
+import { ConnectionState, RoomEvent } from 'livekit-client';
 import {
   isLiveInsightsUpdate,
+  LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE,
   LIVE_INSIGHTS_TOPIC,
 } from '@/helpers/liveInsightsProtocol';
 
@@ -24,19 +25,15 @@ function makeId(): string {
 }
 
 type UseLiveActionItemsOptions = {
-  room?: Room;
-  transcriptLines?: string[];
-  enabled?: boolean;
+  room: Room;
 };
 
-export function useLiveActionItems({ room }: UseLiveActionItemsOptions = {}) {
+export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   const [actionItems, setActionItems] = useState<LiveActionItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const actionItemsRef = useRef<LiveActionItem[]>([]);
 
   useEffect(() => {
-    if (!room) return;
-
     const handleData = (
       payload: Uint8Array,
       sender?: Participant,
@@ -78,8 +75,35 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions = {}) {
 
     room.on(RoomEvent.DataReceived, handleData);
 
+    const requestSnapshot = () => {
+      const message = JSON.stringify({
+        type: LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE,
+      });
+
+      void room.localParticipant
+        .publishData(new TextEncoder().encode(message), {
+          reliable: true,
+          topic: LIVE_INSIGHTS_TOPIC,
+        })
+        .catch((err) => {
+          console.error('Failed to request live insight snapshot:', err);
+        });
+    };
+
+    const handleParticipantConnected = (participant: Participant) => {
+      if (participant.identity.toLowerCase().startsWith('agent-')) {
+        requestSnapshot();
+      }
+    };
+
+    room.on(RoomEvent.Connected, requestSnapshot);
+    room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    if (room.state === ConnectionState.Connected) requestSnapshot();
+
     return () => {
       room.off(RoomEvent.DataReceived, handleData);
+      room.off(RoomEvent.Connected, requestSnapshot);
+      room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
     };
   }, [room]);
 

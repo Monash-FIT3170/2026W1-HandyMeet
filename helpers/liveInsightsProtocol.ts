@@ -2,10 +2,16 @@ import type { LiveInsightActionItem } from './liveInsights';
 
 export const LIVE_INSIGHTS_TOPIC = 'handymeet.live-insights';
 export const LIVE_INSIGHTS_MESSAGE_TYPE = 'live_insights_update';
+export const LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE =
+  'live_insights_snapshot_request';
 
 export type LiveInsightsUpdate = {
   type: typeof LIVE_INSIGHTS_MESSAGE_TYPE;
   actionItems: LiveInsightActionItem[];
+};
+
+export type LiveInsightsSnapshotRequest = {
+  type: typeof LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE;
 };
 
 export function isLiveInsightsUpdate(
@@ -31,5 +37,15 @@ export function isLiveInsightsUpdate(
         (typeof actionItem.dueDate === 'string' || actionItem.dueDate === null)
       );
     })
+  );
+}
+
+export function isLiveInsightsSnapshotRequest(
+  value: unknown,
+): value is LiveInsightsSnapshotRequest {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { type?: unknown }).type === LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE
   );
 }
