@@ -5,6 +5,7 @@ import { LiveKitRoom } from '@livekit/components-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MeetingRoom from '@/components/meeting/MeetingRoom';
+import MeetingControlBar from '@/components/MeetingControlBar';
 import Captions from '@/components/Captions';
 import TranscriptSummary from '@/components/TranscriptSummary';
 import {
@@ -106,11 +107,16 @@ export default function RoomClient({
         <GestureReactionsBanner />
 
         <MeetingRoom
-          captionSettings={captionSettings}
-          onCaptionSettingsChange={setCaptionSettings}
           onLeave={handleLeave}
-          whiteboardOpen={whiteboardOpen}
-          onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
+          renderControls={(controls) => (
+            <MeetingControlBar
+              {...controls}
+              captionSettings={captionSettings}
+              onCaptionSettingsChange={setCaptionSettings}
+              whiteboardOpen={whiteboardOpen}
+              onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
+            />
+          )}
           onLocalVideoRef={(video) => {
             localVideoRef.current = video;
           }}
@@ -120,13 +126,7 @@ export default function RoomClient({
           position={whiteboardOpen ? 'whiteboard' : 'default'}
         />
 
-        <Whiteboard
-          isOpen={whiteboardOpen}
-          onClose={() => setWhiteboardOpen(false)}
-          captionSettings={captionSettings}
-          onCaptionSettingsChange={setCaptionSettings}
-          localVideoRef={localVideoRef}
-        />
+        <Whiteboard isOpen={whiteboardOpen} localVideoRef={localVideoRef} />
       </LiveKitRoom>
     </main>
   );

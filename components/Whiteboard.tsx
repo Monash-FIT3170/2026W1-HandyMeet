@@ -8,7 +8,6 @@ import {
   useRoomContext,
   useTracks,
   ParticipantTile,
-  ControlBar,
 } from '@livekit/components-react';
 import {
   ConnectionState,
@@ -51,8 +50,6 @@ import {
   type ImportMode,
   type ImportModeRequest,
 } from '@/helpers/whiteboard/svgTransfer';
-import TranscriptionSettings from '@/components/TranscriptionSettings';
-import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import GestureDrawingOverlay from '@/components/GestureDrawingOverlay';
 import {
   useGestureDrawing,
@@ -92,9 +89,6 @@ type CursorMessage = {
 
 interface WhiteboardProps {
   isOpen: boolean;
-  onClose: () => void;
-  captionSettings: CaptionSettings;
-  onCaptionSettingsChange: (s: CaptionSettings) => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
@@ -127,13 +121,7 @@ const IMPORT_ACTION_ID = 'handymeet-import-svg';
 /** Translation key backing {@link IMPORT_ACTION_ID}'s label. */
 const IMPORT_LABEL_KEY = 'handymeet.import-svg';
 
-export default function Whiteboard({
-  isOpen,
-  onClose,
-  captionSettings,
-  onCaptionSettingsChange,
-  localVideoRef,
-}: WhiteboardProps) {
+export default function Whiteboard({ isOpen, localVideoRef }: WhiteboardProps) {
   const room = useRoomContext();
   const { isCameraEnabled } = useLocalParticipant();
   const [store] = useState(() =>
@@ -153,8 +141,6 @@ export default function Whiteboard({
   ).filter(
     (track) => !track.participant.identity.toLowerCase().startsWith('agent-'),
   );
-
-  const [captionsOpen, setCaptionsOpen] = useState(false);
 
   useEffect(() => {
     const encoder = new TextEncoder();
@@ -703,7 +689,7 @@ export default function Whiteboard({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 top-0 z-50 bg-neutral-950 flex flex-col overflow-hidden">
+    <div className="fixed inset-x-0 bottom-[64px] top-0 z-50 bg-neutral-950 flex flex-col overflow-hidden">
       {/* Header panel */}
       <div className="h-[45px] flex items-center justify-between px-4 bg-neutral-900 border-b border-neutral-800 shrink-0 select-none">
         <div className="flex items-center gap-3">
@@ -764,13 +750,6 @@ export default function Whiteboard({
             {status?.text ?? ''}
           </span>
         </div>
-
-        <button
-          onClick={onClose}
-          className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
-        >
-          Close
-        </button>
       </div>
 
       <input
@@ -904,127 +883,6 @@ export default function Whiteboard({
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Control bar footer */}
-      <div className="h-[64px] w-full flex items-center px-4 bg-neutral-900 border-t border-neutral-800 shrink-0 select-none text-neutral-300">
-        {/*  Control bar  */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            padding: '0.5rem 5rem 0.75rem 1.75rem',
-            position: 'relative',
-            height: '100%',
-            width: '100%',
-          }}
-        >
-          {/* Gradient accent line */}
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '2px',
-              background:
-                'linear-gradient(90deg, transparent 0%, #10599A 20%, #7099C2 50%, #DB4C77 80%, transparent 100%)',
-              opacity: 0.9,
-            }}
-          />
-
-          {/* Centre pill */}
-          <div className="flex-initial flex items-center justify-end lk-video-conference">
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem',
-                borderRadius: '999px',
-                padding: '0.3rem 0.5rem',
-                zIndex: 999,
-              }}
-            >
-              <ControlBar
-                controls={{
-                  microphone: true,
-                  camera: true,
-                  screenShare: false,
-                  chat: false,
-                  settings: false,
-                  leave: false,
-                }}
-                style={{
-                  border: 'none',
-                  padding: 0,
-                  gap: '0.25rem',
-                  display: 'contents',
-                  alignItems: 'center',
-                }}
-              />
-
-              {/* Divider */}
-              <div
-                style={{
-                  width: '1px',
-                  height: '1.5rem',
-                  background: 'rgba(255,255,255,0.00)',
-                  margin: '0 5rem',
-                  flexShrink: 0,
-                }}
-              />
-
-              {/* Captions */}
-              <div style={{ position: 'relative' }}>
-                {captionsOpen && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: 'calc(100% + 0.75rem)',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      zIndex: 9999,
-                    }}
-                  >
-                    <TranscriptionSettings
-                      settings={captionSettings}
-                      onChange={onCaptionSettingsChange}
-                      open={captionsOpen}
-                      onClose={() => setCaptionsOpen(false)}
-                    />
-                  </div>
-                )}
-                <button
-                  className="lk-button"
-                  aria-pressed={captionsOpen}
-                  onClick={() => setCaptionsOpen((v) => !v)}
-                  title="Captions"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.75}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="2" y="5" width="20" height="14" rx="2" />
-                    <path d="M8 10.5h4" />
-                    <path d="M14 10.5h4" />
-                    <path d="M8 14.5h4" />
-                    <path d="M14 14.5h2" />
-                  </svg>
-                  Captions
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        {/*  End control bar  */}
       </div>
 
       {modeRequest && (
