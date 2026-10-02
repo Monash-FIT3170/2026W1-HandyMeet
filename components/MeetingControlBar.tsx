@@ -49,7 +49,7 @@ export default function MeetingControlBar({
         right: whiteboardOpen ? 0 : undefined,
         height: '64px',
         flexShrink: 0,
-        zIndex: 60,
+        zIndex: 150,
         background: '#171717',
       }}
     >
