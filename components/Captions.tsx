@@ -176,7 +176,7 @@ export default function Captions({ settings, position = 'default' }: Props) {
 
   const style =
     position === 'whiteboard'
-      ? 'z-[100] w-[500px] max-w-[calc(100vw-2rem)] fixed left-[calc(((100vw-320px)/2)-60px)] -translate-x-1/2 bottom-30'
+      ? 'z-[100] w-[500px] max-w-[calc(100vw-2rem)] fixed left-[calc((100vw-320px)/2)] -translate-x-1/2 bottom-30'
       : 'z-[100] w-[500px] max-w-[calc(100vw-2rem)] fixed left-1/2 -translate-x-1/2 bottom-20';
 
   if (!captions.length) {

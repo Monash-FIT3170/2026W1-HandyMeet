@@ -341,7 +341,7 @@ export default function MeetingRoom({
           })}
           {/* Leave confirmation dialog */}
           {showLeaveConfirm && (
-            <div className="fixed inset-0 z-[70]">
+            <div className="fixed inset-0 z-[200]">
               <LeaveConfirmDialog
                 onConfirm={confirmLeave}
                 onCancel={cancelLeave}
