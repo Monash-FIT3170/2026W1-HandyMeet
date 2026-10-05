@@ -56,22 +56,38 @@ export default function JoinForm() {
     return true;
   }
 
-  function createRoom(e: React.BaseSyntheticEvent) {
-    e.preventDefault();
-    if (!validateName()) return;
-    const trimmedCode = roomCode.trim();
-    if (trimmedCode) {
-      const error = roomCodeError(trimmedCode);
-      if (error) {
-        setCodeError(error);
-        return;
-      }
+  async function enterRoom(code: string) {
+  const res = await fetch('/api/room', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ room: code, username: username.trim() }),
+  });
+  if (!res.ok) throw new Error('Could not start session');
+  router.push('/room');
+}
+
+  async function createRoom(e: React.BaseSyntheticEvent) {
+  e.preventDefault();
+  if (isJoining || !validateName()) return;
+  const trimmedCode = roomCode.trim();
+  if (trimmedCode) {
+    const error = roomCodeError(trimmedCode);
+    if (error) {
+      setCodeError(error);
+      return;
     }
-    const code = trimmedCode || generateRoomCode();
-    router.push(
-      `/room/${encodeURIComponent(code)}?username=${encodeURIComponent(username.trim())}`,
-    );
   }
+  const code = trimmedCode || generateRoomCode();
+
+  setJoinError('');
+  setIsJoining(true);
+  try {
+    await enterRoom(code);
+  } catch {
+    setJoinError('Could not create the meeting. Please try again.');
+    setIsJoining(false);
+  }
+}
 
   async function joinRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
@@ -104,9 +120,7 @@ export default function JoinForm() {
         return;
       }
 
-      router.push(
-        `/room/${encodeURIComponent(trimmedCode)}?username=${encodeURIComponent(username.trim())}`,
-      );
+      await enterRoom(trimmedCode);
     } catch {
       setJoinError('Could not verify the room code. Please try again.');
     } finally {
