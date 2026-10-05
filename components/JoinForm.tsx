@@ -13,26 +13,40 @@ const inputClass =
 export default function JoinForm() {
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
 
-  function joinRoom(e: React.BaseSyntheticEvent) {
+  async function joinRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
-    if (!username.trim()) return;
-    if (!roomCode.trim()) {
-      // Create a random room code and join that room
-      const code = generateRoomCode();
-      router.push(
-        `/room/${code}?username=${encodeURIComponent(username.trim())}`,
-      );
-    } else {
-      // Join the specified room
-      router.push(
-        `/room/${encodeURIComponent(roomCode.trim())}?username=${encodeURIComponent(username.trim())}`,
-      );
+    if (!username.trim() || isJoining) return;
+
+    setError('');
+    setIsJoining(true);
+
+    const code = roomCode.trim() || generateRoomCode();
+
+    try {
+      const res = await fetch('/api/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: code, username: username.trim() }),
+      });
+
+      if (!res.ok) {
+        setError('Could not join that room. Try again.');
+        setIsJoining(false);
+        return;
+      }
+
+      router.push('/room');
+    } catch {
+      setError('Something went wrong. Try again.');
+      setIsJoining(false);
     }
   }
 
-  const canAct = username.trim().length > 0;
+  const canAct = username.trim().length > 0 && !isJoining;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
@@ -121,6 +135,12 @@ export default function JoinForm() {
               />
             </div>
 
+            {error && (
+              <p className="text-sm" style={{ color: '#F1B7C9' }}>
+                {error}
+              </p>
+            )}
+
             <button
               type="button"
               disabled={!canAct}
@@ -134,7 +154,7 @@ export default function JoinForm() {
                 (e.currentTarget.style.backgroundColor = '#DB4C77')
               }
             >
-              Join Room
+              {isJoining ? 'Joining...' : 'Join Room'}
             </button>
           </div>
         </div>

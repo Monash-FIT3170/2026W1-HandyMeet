@@ -47,9 +47,7 @@ export default function RoomClient({
   useEffect(() => {
     async function getToken() {
       try {
-        const res = await fetch(
-          `/api/token?room=${encodeURIComponent(roomName)}&username=${encodeURIComponent(username)}`,
-        );
+        const res = await fetch('/api/token');
         if (!res.ok) throw new Error('Token request failed');
         const data = (await res.json()) as { token: string };
         setToken(data.token);
@@ -58,7 +56,7 @@ export default function RoomClient({
       }
     }
     getToken();
-  }, [roomName, username]);
+  }, []);
 
   if (error) {
     return (

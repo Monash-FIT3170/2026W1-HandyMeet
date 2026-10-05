@@ -1,9 +1,11 @@
+import { cookies } from 'next/headers';
 import { AccessToken } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const room = req.nextUrl.searchParams.get('room');
-  const username = req.nextUrl.searchParams.get('username');
+  const jar = await cookies();
+  const room = jar.get('room')?.value;
+  const username = jar.get('username')?.value;
 
   if (!room || !username) {
     return NextResponse.json(
