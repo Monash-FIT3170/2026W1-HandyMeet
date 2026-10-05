@@ -11,6 +11,7 @@ import {
 } from 'react';
 import type { CaptionSettings } from './TranscriptionSettings';
 import { useGestureCaptions } from '@/hooks/useGestureCaptions';
+import { useParticipantNames } from '@/hooks/useParticipantNames';
 
 type Point = { x: number; y: number };
 type DragState = {
@@ -166,6 +167,7 @@ export default function Captions({ settings, position = 'default' }: Props) {
 
   const room = useRoomContext();
   const { gestureCaptions } = useGestureCaptions(room);
+  const getParticipantName = useParticipantNames();
 
   const transcriptions = useTranscriptions();
 
@@ -214,7 +216,10 @@ export default function Captions({ settings, position = 'default' }: Props) {
               }}
             >
               <span>
-                {caption.participantInfo?.identity ?? 'Unknown'}: {caption.text}
+                {caption.participantInfo?.identity
+                  ? getParticipantName(caption.participantInfo.identity)
+                  : 'Unknown'}
+                : {caption.text}
               </span>
             </div>
           );
