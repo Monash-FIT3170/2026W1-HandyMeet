@@ -46,6 +46,12 @@ export default function JoinForm() {
       const res = await fetch(
         `/api/room-exists?room=${encodeURIComponent(trimmedCode)}`,
       );
+
+      if (res.status >= 500) {
+        setJoinError('Something went wrong on our end. Please try again.');
+        return;
+      }
+
       const data = (await res.json()) as { exists?: boolean };
 
       if (!res.ok || !data.exists) {
@@ -186,7 +192,7 @@ export default function JoinForm() {
           )}
 
           {mode === 'create' && (
-            <div className="flex flex-col gap-3">
+            <form onSubmit={createRoom} className="flex flex-col gap-3">
               <input
                 className={inputClass}
                 type="text"
@@ -209,9 +215,8 @@ export default function JoinForm() {
               />
 
               <button
-                type="button"
+                type="submit"
                 disabled={!canCreate}
-                onClick={createRoom}
                 className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
                 onMouseEnter={(e) =>
@@ -223,11 +228,11 @@ export default function JoinForm() {
               >
                 Create Meeting
               </button>
-            </div>
+            </form>
           )}
 
           {mode === 'join' && (
-            <div className="flex flex-col gap-3">
+            <form onSubmit={joinRoom} className="flex flex-col gap-3">
               <input
                 className={inputClass}
                 type="text"
@@ -259,9 +264,8 @@ export default function JoinForm() {
               )}
 
               <button
-                type="button"
+                type="submit"
                 disabled={!canJoin}
-                onClick={joinRoom}
                 className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
                 onMouseEnter={(e) =>
@@ -273,7 +277,7 @@ export default function JoinForm() {
               >
                 {isJoining ? 'Checking...' : 'Join Meeting'}
               </button>
-            </div>
+            </form>
           )}
         </div>
       </div>
