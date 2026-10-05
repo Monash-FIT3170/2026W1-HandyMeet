@@ -20,7 +20,7 @@ export default function GestureReactionsBanner() {
       <span className="text-2xl">{meta.emoji}</span>
       <div className="flex flex-col gap-0.5 min-w-0">
         <span className="text-[11px] font-bold uppercase tracking-wider text-neutral-400 truncate">
-          {participant?.identity}
+          {participant?.name || participant?.identity}
         </span>
         <span className="text-sm font-bold text-neutral-100 truncate">
           {meta.label}
