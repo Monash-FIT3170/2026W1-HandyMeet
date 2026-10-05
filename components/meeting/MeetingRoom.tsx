@@ -51,6 +51,7 @@ import {
   useGestureCaptions,
   type TimestampedTranscriptEntry,
 } from '@/hooks/useGestureCaptions';
+import { useParticipantNames } from '@/hooks/useParticipantNames';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -141,6 +142,7 @@ export default function MeetingRoom({
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
+  const getParticipantName = useParticipantNames();
   const { gestureTranscriptEntries, flushActive } = useGestureCaptions(room);
   const speechTimestampsRef = useRef<Map<string, number>>(new Map());
   const handTrackingVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -259,7 +261,7 @@ export default function MeetingRoom({
           timestamps.set(key, now);
         }
         return {
-          text: `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
+          text: `${t.participantInfo?.identity ? getParticipantName(t.participantInfo.identity) : 'Unknown'}: ${t.text}`,
           timestamp: timestamps.get(key)!,
         };
       });
@@ -273,7 +275,7 @@ export default function MeetingRoom({
 
       return allEntries.map((e) => e.text);
     },
-    [transcriptions, gestureTranscriptEntries],
+    [transcriptions, gestureTranscriptEntries, getParticipantName],
   );
 
   const transcriptLines = useMemo(
