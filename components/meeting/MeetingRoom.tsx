@@ -43,6 +43,7 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
+import { useParticipantNames } from '@/hooks/useParticipantNames';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -126,6 +127,7 @@ export default function MeetingRoom({
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
+  const getParticipantName = useParticipantNames();
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPredictingGestureRef = useRef(false);
@@ -235,7 +237,8 @@ export default function MeetingRoom({
   }, [layoutContext.pin, screenShareTracks]);
 
   const transcriptLines = transcriptions.map(
-    (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
+    (t) =>
+      `${t.participantInfo?.identity ? getParticipantName(t.participantInfo.identity) : 'Unknown'}: ${t.text}`,
   );
 
   // Checks for completed transcript lines every second and only calls Groq

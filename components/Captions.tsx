@@ -5,6 +5,7 @@ import { useRoomContext, useTranscriptions } from '@livekit/components-react';
 import { useState } from 'react';
 import type { CaptionSettings } from './TranscriptionSettings';
 import { useGestureCaptions } from '@/hooks/useGestureCaptions';
+import { useParticipantNames } from '@/hooks/useParticipantNames';
 
 type Props = {
   settings: CaptionSettings;
@@ -16,6 +17,7 @@ export default function Captions({ settings, position = 'default' }: Props) {
 
   const room = useRoomContext();
   const { gestureCaptions } = useGestureCaptions(room);
+  const getParticipantName = useParticipantNames();
 
   const transcriptions = useTranscriptions();
 
@@ -71,7 +73,10 @@ export default function Captions({ settings, position = 'default' }: Props) {
               }}
             >
               <span>
-                {caption.participantInfo?.identity ?? 'Unknown'}: {caption.text}
+                {caption.participantInfo?.identity
+                  ? getParticipantName(caption.participantInfo.identity)
+                  : 'Unknown'}
+                : {caption.text}
               </span>
             </div>
           );
