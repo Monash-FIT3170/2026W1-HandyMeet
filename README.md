@@ -24,6 +24,8 @@ The following software is required for development of HandyMeet.
   used to build and run the application locally (https://www.docker.com/get-started/)
 - Git
   Used to clone and manage the repository
+- Node.js
+  Used to run the project without Docker (v26.10.0 is recommended)
 - npm
   Used to install dependencies and run development scripts
 - Accounts and API keys for:
@@ -101,21 +103,177 @@ For local development, these values are set in `.env.local`
 
 For CI/CD and actual deployment, these values are stored as **GitHub Environment secrets** under the `production` environment.
 
-## Running the Application
+## Running with Docker
 
-1. Create a .env.local file in the project root and include the necessary environment variables (listed below)
+Open a terminal tab and from the project root, run:
 
-2. The application can be built and run locally using Docker by executing:
+```
+docker compose up --build
+```
 
-`docker compose up --build`
+This command builds all the required Docker images and starts HandyMeet. On the first build of the application expect a 5-10 minute build period.
 
-This will build the required container images. Subsequent runs after building the image (without changes) can be run without the `--build` flag
+On subsequent builds, if no dependecies or Docker-related files are edited, the application can be started with this command instead:
 
-### Architecture
+```
+docker compose up
+```
 
-- Next.js: The web application is built on Next.js, handling the UI, while also offering a simple backend to manage rooms and routing
+Once the containers are running and the previous command is complete, open:
 
-- LiveKit agent: a TypeScript based agent that joins meetings server side to provide real time transcription (via Deepgram) and generates post meeting summaries (via Gemini)
+```
+http://localhost:<PORT>
+```
+
+Most likely, this port will be 3000, but Docker can specify another port in the terminal output:
+
+```
+http://localhost:3000
+```
+
+To stop the application:
+
+```
+docker compose down
+```
+
+## Running without Docker
+
+For faster development, the application can be run directly without Docker.
+
+Install dependecies:
+
+```
+npm install
+```
+
+Start the development server:
+
+```
+npm run dev
+```
+
+In your browser open:
+
+```
+http://localhost:3000
+```
+
+The caption agent will also need to be manually run:
+
+```
+node --env-file=.env.local ./agent/transcription.ts dev
+```
+
+## Confirming the caption agent has joined a meeting
+
+When a meeting room is created, the LiveKit agent should also join the room, this can be verified by:
+
+1. Start the application (with Docker or without Docker including running the caption agent command)
+
+2. Create a HandyMeet meeting room
+
+3. Ensure your microphone is unmuted, and speak into the microphone
+
+4. Confirm the live captions appears at the bottom
+
+5. Check the LiveKit agent logs for a successful room connection.
+
+## Running Tests
+
+Install dependecies:
+
+```
+npm install
+```
+
+Run the project's tests with:
+
+```
+npm test
+```
+
+Note: the project currently uses `react-test-renderer` for some React unit tests.
+However `react-test-renderer` has been deprecated, so future developers should consider migrating these tests to a more modern supported testing approach.
+
+## Architecture
+
+HandyMeet consists of several cooperating components.
+
+                         ┌──────────────────────┐
+                         │      User Browser    │
+                         │                      │
+                         │ Next.js / React UI   │
+                         │ MediaPipe            │
+                         │ TensorFlow.js Model  │
+                         │ tldraw Whiteboard    │
+                         └──────────┬───────────┘
+                                    │
+                             WebRTC / WebSocket
+                                    │
+                           ┌────────▼────────┐
+                           │    LiveKit      │
+                           │     Cloud       │
+                           └───────┬─────────┘
+                                   │
+                    ┌──────────────▼──────────────┐
+                    │      LiveKit Agent          │
+                    │        TypeScript           │
+                    │                             │
+                    │ Deepgram transcription      │
+                    │ Gemini summaries            │
+                    │ Groq action-item processing │
+                    └─────────────────────────────┘
+
+### Next.js Application
+
+### LiveKit
+
+### LiveKit Agent
+
+### Deepgram
+
+### Groq
+
+### MediaPipe and TensorFlow.js
+
+## Sign and Gesture Recognition Model
+
+### Model Location
+
+### Input Data
+
+### Training Dataset
+
+### Adding a new sign/gesture
+
+## Repository Structure
+
+## Deployment
+
+### Web Application
+
+### LiveKit Agent
+
+### Account Ownership and Handover
+
+## Commmon Issues and Troublesohoting
+
+### Camera/Microphone does not work
+
+### LiveKit Agent does not join the meeting
+
+### Transcription does not work
+
+### Gemini Summary does not generate
+
+### Groq action items are missing
+
+### API Free tier limits
+
+## Known Technical Debt
+
+### react-test-renderer
 
 ## Notes for Future Developers
 
@@ -125,32 +283,22 @@ This will build the required container images. Subsequent runs after building th
 
 ## Team Member Contacts
 
-1. Richard Li RichardLi88 rlii0102@student.monash.edu
+Student email accounts may eventually expire, so **GitHub accounts should be treated as the primary long-term contact method** where possible.
 
-2. Dasun Udugoda Dasun-Udugoda wudu0002@student.monash.edu
-
-3. May McGrath maymcgrath mmcg0028@student.monash.edu
-
-4. Michael Alexander mimgl male0019@student.monash.edu
-
-5. Param Dhaliwal prmdhaliwal pdha0007@student.monash.edu
-
-6. Sebastian Aisea sebastianaisea sais0004@student.monash.edu
-
-7. Jared Kosem niceguys72 jkos0011@student.monash.edu
-
-8. May Tran maytrran mtra0067@student.monash.edu
-
-9. Bita Afshar bitafsh bafs0001@student.monash.edu
-
-10. Naveen Rajeev naveenrajeev16 nraj0031@student.monash.edu
-
-11. Tam Quan TamvyQuan tqua0013@student.monash.edu
-
-12. Shen-Kit Hia shen-kit shia0001@student.monash.edu
-
-13. Sinan Ummu sua22 summ0001@student.monash.edu
-
-14. Keith Ng kngg0077 kngg0077@student.monash.edu
-
-15. Neil Savio Pereira neilsbp nper0041@student.monash.edu
+| Name               | GitHub         | Monash Email                                                      | Long-term Contact               |
+| ------------------ | -------------- | ----------------------------------------------------------------- | ------------------------------- |
+| Richard Li         | RichardLi88    | [rlii0102@student.monash.edu](mailto:rlii0102@student.monash.edu) | `<LinkedIn/professional email>` |
+| Dasun Udugoda      | Dasun-Udugoda  | [wudu0002@student.monash.edu](mailto:wudu0002@student.monash.edu) | `<contact>`                     |
+| May McGrath        | maymcgrath     | [mmcg0028@student.monash.edu](mailto:mmcg0028@student.monash.edu) | `<contact>`                     |
+| Michael Alexander  | mimgl          | [male0019@student.monash.edu](mailto:male0019@student.monash.edu) | `<contact>`                     |
+| Param Dhaliwal     | prmdhaliwal    | [pdha0007@student.monash.edu](mailto:pdha0007@student.monash.edu) | `<contact>`                     |
+| Sebastian Aisea    | sebastianaisea | [sais0004@student.monash.edu](mailto:sais0004@student.monash.edu) | `<contact>`                     |
+| Jared Kosem        | niceguys72     | [jkos0011@student.monash.edu](mailto:jkos0011@student.monash.edu) | `<contact>`                     |
+| May Tran           | maytrran       | [mtra0067@student.monash.edu](mailto:mtra0067@student.monash.edu) | `<contact>`                     |
+| Bita Afshar        | bitafsh        | [bafs0001@student.monash.edu](mailto:bafs0001@student.monash.edu) | `<contact>`                     |
+| Naveen Rajeev      | naveenrajeev16 | [nraj0031@student.monash.edu](mailto:nraj0031@student.monash.edu) | `<contact>`                     |
+| Tam Quan           | TamvyQuan      | [tqua0013@student.monash.edu](mailto:tqua0013@student.monash.edu) | `<LinkedIn/professional email>` |
+| Shen-Kit Hia       | shen-kit       | [shia0001@student.monash.edu](mailto:shia0001@student.monash.edu) | `<contact>`                     |
+| Sinan Ummu         | sua22          | [summ0001@student.monash.edu](mailto:summ0001@student.monash.edu) | `<contact>`                     |
+| Keith Ng           | kngg0077       | [kngg0077@student.monash.edu](mailto:kngg0077@student.monash.edu) | `<contact>`                     |
+| Neil Savio Pereira | neilsbp        | [nper0041@student.monash.edu](mailto:nper0041@student.monash.edu) | `<contact>`                     |
