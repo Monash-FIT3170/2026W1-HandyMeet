@@ -54,6 +54,7 @@ import {
   type ImportModeRequest,
 } from '@/helpers/whiteboard/svgTransfer';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
+import { registerShapeDeletionGuard } from '@/helpers/whiteboard/shapeOwnership';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import GestureDrawingOverlay from '@/components/GestureDrawingOverlay';
 import {
@@ -503,6 +504,16 @@ export default function Whiteboard({
       store.mergeRemoteChanges(() => store.remove(presenceIds));
     };
   }, [editor, isOpen, room, store]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const participant = room.localParticipant;
+    return registerShapeDeletionGuard(
+      editor,
+      participant.identity,
+      participant.name || participant.identity,
+    );
+  }, [editor, room]);
 
   // `CommentTool.configure()` returns a fresh class on every call, and tldraw
   // recreates the entire Editor whenever the contents of `tools` change
