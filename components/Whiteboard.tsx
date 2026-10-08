@@ -1,5 +1,6 @@
 'use client';
 
+import { registerShapeOwnership } from '@/helpers/whiteboard/shapeOwnership';
 import 'tldraw/tldraw.css';
 import '@tldraw/commenting/commenting.css';
 import {
@@ -37,6 +38,7 @@ import {
   type TLStoreEventInfo,
   type TLUiOverrides,
 } from 'tldraw';
+import ShapeAuthorHover from '@/components/whiteboard/ShapeAuthorHover';
 import {
   CanvasComments,
   CommentAuthor,
@@ -376,10 +378,19 @@ export default function Whiteboard({
     );
   }, []);
 
-  const handleEditorMount = useCallback((editor: Editor) => {
-    editorRef.current = editor;
-    setEditor(editor);
-  }, []);
+  const handleEditorMount = useCallback(
+    (editor: Editor) => {
+      editorRef.current = editor;
+      setEditor(editor);
+      const participant = room.localParticipant;
+      return registerShapeOwnership(
+        editor,
+        participant.identity,
+        participant.name || participant.identity,
+      );
+    },
+    [room],
+  );
 
   useEffect(() => {
     if (!isOpen || !editor) return;
@@ -570,6 +581,7 @@ export default function Whiteboard({
 
   const components = useMemo<TLComponents>(
     () => ({
+      OnTheCanvas: ShapeAuthorHover,
       InFrontOfTheCanvas: () => (
         <CanvasComments
           currentUserId={currentUserId}
