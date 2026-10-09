@@ -178,8 +178,6 @@ Run the project's tests with:
 npm test
 ```
 
-Note: the project currently uses `react-test-renderer` for some React unit tests.
-However `react-test-renderer` has been deprecated, so future developers should consider migrating these tests to a more modern supported testing approach.
 For the end-to-end testing, playwright is used. Run it with:
 
 ```bash
@@ -264,13 +262,9 @@ HandyMeet consists of several cooperating components.
 
 ## Known Technical Debt
 
-### react-test-renderer
-
 ## Notes for Future Developers
 
 - The Next.js app deploys through Vercel and the LiveKit agent deploys through LiveKit Cloud. Details on deploying and maintaining the agent can be found in the LiveKit Cloud docs and .github/workflows/deploy-agent.yml
-
-- Unit tests are currently utilising react-test-render, which is now deprecated
 
 ## Team Member Contacts
 
