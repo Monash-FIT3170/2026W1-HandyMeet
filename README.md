@@ -226,15 +226,18 @@ HandyMeet consists of several cooperating components.
 
 ### MediaPipe and TensorFlow.js
 
-## Sign and Gesture Recognition Model
+## Sign Language and Gesture Recognition Model
 
-### Model Location
+### Important Files / Directories
 
-### Input Data
+**Model**: `./scripts/gesture-recognition/model.h5`
+**Raw videos**: `./scripts/gesture-recognition/training_data/00_videos/`
+**Images captured from videos**: `./scripts/gesture-recognition/training_data/01_images/`
+**Training dataset**: `./scripts/gesture-recognition/training_data/02_training_data/`
 
-### Training Dataset
+### Adding a New Gesture
 
-### Adding a new sign/gesture
+Detailed instructions are in `./scripts/gesture-recognition/README.md`. This includes creating raw training data, rules for multi-hand inference, and instructions for training a new model.
 
 ## Repository Structure
 
