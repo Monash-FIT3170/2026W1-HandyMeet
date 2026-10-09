@@ -67,28 +67,15 @@ cd <repository-folder>
 
 ### 2. Configure environment variables
 
-After changing directory into the repository, in the project root create a file named:
+In the project root, copy `.env.example` to `.env.local`:
 
 ```
-.env.local
+cp .env.example .env.local
 ```
 
-This `.env.local` file will contain all the API keys and sensitive credentials and should never be committed to Git. Ensure that this file is also added to the `.gitignore` if not already by checking if `.env.local` is included in the `.gitignore` file.
+`.env.local` will contain all the API keys and sensitive credentials and should never be committed to Git.
 
-A `.env.example` file should however be committed to the repository with the required variable names but **no** secret values/API keys.
-
-Example:
-
-```
-LIVEKIT_URL =
-NEXT_PUBLIC_LIVEKIT_URL=
-LIVEKIT_API_KEY =
-LIVEKIT_API_SECRET =
-DEEPGRAM_API_KEY =
-GEMINI_API_KEY =
-NEXT_PUBLIC_TLDRAW_LICENSE_KEY =
-GROQ_API_KEY =
-```
+`.env.example` should never be populated with API keys/secret values.
 
 | Variable                                  | Purpose                       | Source                  |
 | ----------------------------------------- | ----------------------------- | ----------------------- |
@@ -99,9 +86,7 @@ GROQ_API_KEY =
 | `NEXT_PUBLIC_TLDRAW_LICENSE_KEY`          | Whiteboard (tldraw) license   | tldraw                  |
 | `GROQ_API_KEY`                            | Live Action item detection    | GroqCloud               |
 
-For local development, these values are set in `.env.local`
-
-For CI/CD and actual deployment, these values are stored as **GitHub Environment secrets** under the `production` environment.
+For CI and deployment, these values are stored as **GitHub Environment secrets** under the `production` environment.
 
 ## Running with Docker
 
