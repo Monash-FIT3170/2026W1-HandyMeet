@@ -161,6 +161,84 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(overlay).toBeDisabled();
   });
 
+  test('Then the Send button posts a chat message', async ({ page }) => {
+    await joinRoom(page);
+
+    await page.getByRole('button', { name: /^chat/i }).click();
+    const messageInput = page.getByPlaceholder('Enter a message...');
+    await messageInput.fill('Hello room!');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+
+    await expect(page.locator('.lk-chat-entry')).toContainText('Hello room!');
+    await expect(messageInput).toHaveValue('');
+  });
+
+  test('Then caption size is kept when settings are reopened', async ({
+    page,
+  }) => {
+    await joinRoom(page);
+
+    await page.getByTitle('Captions').click();
+    await page.locator('input[type="range"]').fill('28');
+    await page.getByTitle('Close', { exact: true }).click();
+    await expect(page.getByText('Caption Settings')).toBeHidden();
+    await page.getByTitle('Captions').click();
+
+    await expect(page.locator('input[type="range"]')).toHaveValue('28');
+    await expect(page.getByText('28px', { exact: true })).toBeVisible();
+  });
+
+  test('Then gesture controls are disabled when the camera is off', async ({
+    page,
+  }) => {
+    await joinRoom(page);
+
+    const camera = cameraButton(page);
+    await expect(camera).toHaveAttribute('aria-pressed', 'true');
+    await camera.click();
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+    await page.getByTitle('Gestures').click();
+
+    await expect(
+      page.getByRole('button', { name: 'Hand tracking' }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Show overlay' }),
+    ).toBeDisabled();
+  });
+
+  test('Then the whiteboard button opens a whiteboard that can be closed', async ({
+    page,
+  }) => {
+    await joinRoom(page);
+
+    const button = page.getByTitle('Whiteboard');
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await button.click();
+    await expect(
+      page.getByRole('button', { name: 'Gesture Draw', exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Gesture Draw', exact: true }),
+    ).toBeHidden();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('Then cancelling Leave keeps the user in the room', async ({ page }) => {
+    await joinRoom(page);
+
+    await page.getByRole('button', { name: 'Leave', exact: true }).click();
+    const heading = page.getByRole('heading', { name: 'Leave the call?' });
+    await expect(heading).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+
+    await expect(heading).toBeHidden();
+    await expect(page).toHaveURL(/\/room\//);
+    await expect(microphoneButton(page)).toBeEnabled();
+  });
+
   test('Then leaving opens the transcript summary and its actions work', async ({
     page,
   }) => {
