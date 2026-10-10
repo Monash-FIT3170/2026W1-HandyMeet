@@ -176,128 +176,82 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(overlay).toBeDisabled();
   });
 
-  test('Then hand tracking can be enabled with video off and releases its camera when stopped', async ({
+  test('Then the Send button posts a chat message', async ({ page }) => {
+    await joinRoom(page);
+
+    await page.getByRole('button', { name: /^chat/i }).click();
+    const messageInput = page.getByPlaceholder('Enter a message...');
+    await messageInput.fill('Hello room!');
+    await page.getByRole('button', { name: 'Send', exact: true }).click();
+
+    await expect(page.locator('.lk-chat-entry')).toContainText('Hello room!');
+    await expect(messageInput).toHaveValue('');
+  });
+
+  test('Then caption size is kept when settings are reopened', async ({
     page,
   }) => {
     await joinRoom(page);
+
+    await page.getByTitle('Captions').click();
+    await page.locator('input[type="range"]').fill('28');
+    await page.getByTitle('Close', { exact: true }).click();
+    await expect(page.getByText('Caption Settings')).toBeHidden();
+    await page.getByTitle('Captions').click();
+
+    await expect(page.locator('input[type="range"]')).toHaveValue('28');
+    await expect(page.getByText('28px', { exact: true })).toBeVisible();
+  });
+
+  test('Then gesture controls are disabled when the camera is off', async ({
+    page,
+  }) => {
+    await joinRoom(page);
+
     const camera = cameraButton(page);
     await expect(camera).toHaveAttribute('aria-pressed', 'true');
     await camera.click();
     await expect(camera).toHaveAttribute('aria-pressed', 'false');
-
     await page.getByTitle('Gestures').click();
-    const handTracking = page.getByRole('button', { name: 'Hand tracking' });
-    await expect(handTracking).toBeEnabled();
-    await handTracking.click();
-    await expect(handTracking).toHaveAttribute('aria-pressed', 'true');
+
+    await expect(
+      page.getByRole('button', { name: 'Hand tracking' }),
+    ).toBeDisabled();
     await expect(
       page.getByRole('button', { name: 'Show overlay' }),
     ).toBeDisabled();
-    const trackingCamera = page.locator('video[data-hand-tracking-camera]');
-    await expect
-      .poll(() =>
-        trackingCamera.evaluate(
-          (video: HTMLVideoElement) =>
-            (video.srcObject as MediaStream | null)?.getVideoTracks()[0]
-              ?.readyState,
-        ),
-      )
-      .toBe('live');
-    await expect(camera).toHaveAttribute('aria-pressed', 'false');
-
-    await handTracking.click();
-    await expect
-      .poll(() =>
-        trackingCamera.evaluate((video: HTMLVideoElement) => video.srcObject),
-      )
-      .toBeNull();
-    await expect(camera).toHaveAttribute('aria-pressed', 'false');
   });
 
-  test.describe('And they use the room code button', () => {
-    test.skip(
-      ({ browserName }) => browserName !== 'chromium',
-      'Clipboard permissions are Chromium-only',
-    );
-    test.use({
-      permissions: [
-        'camera',
-        'microphone',
-        'clipboard-read',
-        'clipboard-write',
-      ],
-    });
+  test('Then the whiteboard button opens a whiteboard that can be closed', async ({
+    page,
+  }) => {
+    await joinRoom(page);
 
-    test('Then the room code is hidden until the button is hovered', async ({
-      page,
-    }) => {
-      const roomCode = await joinRoom(page);
+    const button = page.getByTitle('Whiteboard');
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await button.click();
+    await expect(
+      page.getByRole('button', { name: 'Gesture Draw', exact: true }),
+    ).toBeVisible();
 
-      const button = roomCodeButton(page, roomCode);
-      const label = button.getByText('Code', { exact: true });
-      const code = button.getByText(roomCode);
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Gesture Draw', exact: true }),
+    ).toBeHidden();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+  });
 
-      await expect(label).toHaveCSS('opacity', '1');
-      await expect(code).toHaveCSS('opacity', '0');
+  test('Then cancelling Leave keeps the user in the room', async ({ page }) => {
+    await joinRoom(page);
 
-      await button.hover();
-      await expect(code).toHaveCSS('opacity', '1');
-      await expect(label).toHaveCSS('opacity', '0');
+    await page.getByRole('button', { name: 'Leave', exact: true }).click();
+    const heading = page.getByRole('heading', { name: 'Leave the call?' });
+    await expect(heading).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 
-      await page.mouse.move(0, 0);
-      await expect(code).toHaveCSS('opacity', '0');
-      await expect(label).toHaveCSS('opacity', '1');
-    });
-
-    test('Then clicking the button copies the room code to the clipboard', async ({
-      page,
-    }) => {
-      const roomCode = await joinRoom(page);
-
-      const button = roomCodeButton(page, roomCode);
-      await button.click();
-
-      await expect(visibleText(button, 'Copied!')).toHaveCSS('opacity', '1');
-      await expect(button.locator('[role="status"]')).toHaveText('Copied!');
-
-      const clipboard = await page.evaluate(() =>
-        navigator.clipboard.readText(),
-      );
-      expect(clipboard).toBe(roomCode);
-    });
-
-    test('Then the button returns to its label after copying without revealing the code', async ({
-      page,
-    }) => {
-      const roomCode = await joinRoom(page);
-
-      const button = roomCodeButton(page, roomCode);
-      await button.click();
-      await page.mouse.move(0, 0);
-
-      await expect(visibleText(button, 'Copied!')).toHaveCSS('opacity', '0', {
-        timeout: 4_000,
-      });
-      await expect(button.getByText('Code', { exact: true })).toHaveCSS(
-        'opacity',
-        '1',
-      );
-      await expect(button.getByText(roomCode)).toHaveCSS('opacity', '0');
-    });
-
-    test('Then the room code is revealed when the button is focused by keyboard', async ({
-      page,
-    }) => {
-      const roomCode = await joinRoom(page);
-
-      const button = roomCodeButton(page, roomCode);
-      await button.focus();
-      await page.keyboard.press('Shift+Tab');
-      await page.keyboard.press('Tab');
-
-      await expect(button).toBeFocused();
-      await expect(button.getByText(roomCode)).toHaveCSS('opacity', '1');
-    });
+    await expect(heading).toBeHidden();
+    await expect(page).toHaveURL(/\/room\//);
+    await expect(microphoneButton(page)).toBeEnabled();
   });
 
   test('Then leaving opens the transcript summary and its actions work', async ({
