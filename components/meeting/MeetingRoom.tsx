@@ -108,12 +108,14 @@ export type MeetingControls = {
 };
 
 type MeetingRoomProps = {
+  whiteboardOpen: boolean;
   onLeave: (transcriptLines: string[]) => void;
   renderControls: (controls: MeetingControls) => ReactNode;
   onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
 };
 
 export default function MeetingRoom({
+  whiteboardOpen,
   onLeave,
   renderControls,
   onLocalVideoRef,
@@ -351,7 +353,22 @@ export default function MeetingRoom({
         </div>
         {/*  End lk-video-conference-inner  */}
 
-        <Chat style={{ display: widgetState.showChat ? 'grid' : 'none' }} />
+        <Chat
+          style={{
+            display: widgetState.showChat ? 'grid' : 'none',
+            ...(whiteboardOpen
+              ? {
+                  position: 'fixed',
+                  top: 0,
+                  right: 0,
+                  bottom: '64px',
+                  height: 'calc(100dvh - 64px)',
+                  width: 'min(320px, 100vw)',
+                  zIndex: 110,
+                }
+              : {}),
+          }}
+        />
       </LayoutContextProvider>
 
       {insightsEnabled && (

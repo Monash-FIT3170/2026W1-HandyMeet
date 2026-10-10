@@ -107,6 +107,7 @@ export default function RoomClient({
         <GestureReactionsBanner />
 
         <MeetingRoom
+          whiteboardOpen={whiteboardOpen}
           onLeave={handleLeave}
           renderControls={(controls) => (
             <MeetingControlBar

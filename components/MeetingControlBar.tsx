@@ -80,8 +80,8 @@ export default function MeetingControlBar({
           controls={{
             microphone: true,
             camera: true,
-            screenShare: true,
-            chat: !whiteboardOpen,
+            screenShare: !whiteboardOpen,
+            chat: true,
             settings: false,
             leave: false,
           }}
