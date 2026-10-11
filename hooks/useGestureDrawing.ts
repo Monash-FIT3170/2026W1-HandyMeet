@@ -13,8 +13,11 @@ import { DrawingGesture } from '@/constants/gestures';
 export type DrawingPoint = { x: number; y: number };
 export type DrawingStroke = DrawingPoint[];
 
-const SMOOTHING_WINDOW = 3;
-const JUMP_THRESHOLD = 0.3;
+// bumped these up, 2 hands = more jitter than 1 hand
+const SMOOTHING_WINDOW = 6;
+const JUMP_THRESHOLD = 0.15;
+// wait for a few fist frames in a row before drawing, stops 1 bad frame starting a line
+const STABILITY_FRAMES_REQUIRED = 3;
 
 // The cursor hand always tracks its index fingertip, whatever pose it's in,
 // so positioning it never has to change its own gesture. The other hand
@@ -107,12 +110,12 @@ export function useGestureDrawing({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Cleanup is legitimate here
       resetState();
       return;
     }
 
     let wasDrawing = false;
+    let controlStability = 0;
 
     function stopDrawing() {
       if (wasDrawing && currentStrokeRef.current.length > 0) {
@@ -194,27 +197,32 @@ export function useGestureDrawing({
       setCurrentGesture(controlGesture);
 
       if (controlGesture === DrawingGesture.Fist) {
-        const lastPos = lastPositionRef.current;
-        const jumped =
-          lastPos &&
-          Math.hypot(
-            smoothedPosition.x - lastPos.x,
-            smoothedPosition.y - lastPos.y,
-          ) > JUMP_THRESHOLD;
+        controlStability++;
 
-        if (!wasDrawing) {
-          wasDrawing = true;
-          setIsDrawing(true);
-          currentStrokeRef.current = [];
+        if (controlStability >= STABILITY_FRAMES_REQUIRED) {
+          const lastPos = lastPositionRef.current;
+          const jumped =
+            lastPos &&
+            Math.hypot(
+              smoothedPosition.x - lastPos.x,
+              smoothedPosition.y - lastPos.y,
+            ) > JUMP_THRESHOLD;
+
+          if (!wasDrawing) {
+            wasDrawing = true;
+            setIsDrawing(true);
+            currentStrokeRef.current = [];
+          }
+
+          if (!jumped) {
+            currentStrokeRef.current.push(smoothedPosition);
+            onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
+          }
+
+          lastPositionRef.current = smoothedPosition;
         }
-
-        if (!jumped) {
-          currentStrokeRef.current.push(smoothedPosition);
-          onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
-        }
-
-        lastPositionRef.current = smoothedPosition;
       } else {
+        controlStability = 0;
         stopDrawing();
       }
 
