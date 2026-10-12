@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DataPacket_Kind, Participant, Room } from 'livekit-client';
 import { ConnectionState, RoomEvent } from 'livekit-client';
+import type { LiveInsightActionItem } from '@/helpers/liveInsights';
 import {
   isLiveInsightsCoordinatorState,
   LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
@@ -14,16 +15,9 @@ import {
   LIVE_INSIGHTS_TOPIC,
 } from '@/helpers/liveInsightsProtocol';
 
-export type ActionItemStatus = 'suggested' | 'accepted' | 'dismissed';
+export type ActionItemStatus = LiveInsightActionItem['status'];
 
-export type LiveActionItem = {
-  id: string;
-  task: string;
-  owner: string | null;
-  dueDate: string | null;
-  status: ActionItemStatus;
-  assigneeId: string | null;
-};
+export type LiveActionItem = LiveInsightActionItem;
 
 type UseLiveActionItemsOptions = {
   room: Room;
@@ -88,25 +82,7 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
 
         if (!isLiveInsightsUpdate(data)) return;
 
-        const currentItemsById = new Map(
-          actionItemsRef.current.map((item) => [item.id, item]),
-        );
-        const nextItems = data.actionItems.map((item) => {
-          const existingItem = currentItemsById.get(item.id);
-          if (existingItem) {
-            return {
-              ...item,
-              status: existingItem.status,
-              assigneeId: existingItem.assigneeId,
-            };
-          }
-
-          return {
-            ...item,
-            status: 'suggested' as const,
-            assigneeId: null,
-          };
-        });
+        const nextItems = data.actionItems;
 
         actionItemsRef.current = nextItems;
         setActionItems(nextItems);

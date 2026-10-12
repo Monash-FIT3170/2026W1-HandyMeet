@@ -8,8 +8,15 @@ export type LiveInsightActionItemFields = {
   dueDate: string | null;
 };
 
+export type LiveInsightActionItemStatus =
+  | 'suggested'
+  | 'accepted'
+  | 'dismissed';
+
 export type LiveInsightActionItem = LiveInsightActionItemFields & {
   id: string;
+  status: LiveInsightActionItemStatus;
+  assigneeId: string | null;
 };
 
 type ExtractLiveActionItemsOptions = {

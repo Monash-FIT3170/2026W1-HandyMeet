@@ -86,7 +86,13 @@ export function isLiveInsightsUpdate(
         actionItem.id.length > 0 &&
         typeof actionItem.task === 'string' &&
         (typeof actionItem.owner === 'string' || actionItem.owner === null) &&
-        (typeof actionItem.dueDate === 'string' || actionItem.dueDate === null)
+        (typeof actionItem.dueDate === 'string' ||
+          actionItem.dueDate === null) &&
+        (actionItem.status === 'suggested' ||
+          actionItem.status === 'accepted' ||
+          actionItem.status === 'dismissed') &&
+        (typeof actionItem.assigneeId === 'string' ||
+          actionItem.assigneeId === null)
       );
     })
   );
