@@ -16,6 +16,7 @@ import {
   isLiveInsightsCoordinatorClaim,
   isLiveInsightsCoordinatorHandoff,
   isLiveInsightsCoordinatorStateRequest,
+  isLiveInsightsMutation,
   LIVE_INSIGHTS_MESSAGE_TYPE,
   isLiveInsightsSnapshotRequest,
   LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
@@ -140,6 +141,31 @@ export default defineAgent({
         }
 
         if (
+          isLiveInsightsMutation(message) &&
+          participant.identity === coordinatorIdentity
+        ) {
+          const actionItem = knownActionItems.find(
+            (item) => item.id === message.itemId,
+          );
+          if (!actionItem) return;
+
+          if (message.operation === 'accept') {
+            actionItem.status = 'accepted';
+          } else if (message.operation === 'dismiss') {
+            actionItem.status = 'dismissed';
+          } else if (message.operation === 'edit') {
+            Object.assign(actionItem, message.updates);
+          } else if (message.operation === 'assign') {
+            actionItem.assigneeId = message.assigneeId;
+          }
+
+          void publishActionItems().catch((error) => {
+            console.error('Live action item update failed:', error);
+          });
+          return;
+        }
+
+        if (
           isLiveInsightsCoordinatorHandoff(message) &&
           participant.identity === coordinatorIdentity &&
           participantClaims.has(message.targetIdentity)
@@ -190,6 +216,8 @@ export default defineAgent({
           ...newActionItems.map((actionItem: LiveInsightActionItemFields) => ({
             ...actionItem,
             id: `agent-action-item-${randomUUID()}`,
+            status: 'suggested' as const,
+            assigneeId: null,
           })),
         );
         await publishActionItems();
