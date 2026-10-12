@@ -43,6 +43,7 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
+import RoomCodeButton from './RoomCodeButton';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -95,6 +96,7 @@ function MeetingTile({
 }
 
 type MeetingRoomProps = {
+  roomCode: string;
   captionSettings: CaptionSettings;
   onCaptionSettingsChange: (s: CaptionSettings) => void;
   onLeave: (transcriptLines: string[]) => void;
@@ -104,6 +106,7 @@ type MeetingRoomProps = {
 };
 
 export default function MeetingRoom({
+  roomCode,
   captionSettings,
   onCaptionSettingsChange,
   onLeave,
@@ -347,8 +350,12 @@ export default function MeetingRoom({
               }}
             />
 
-            {/* Left spacer */}
-            <div style={{ flex: 1 }} />
+            {/* Left: room code */}
+            <div
+              style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}
+            >
+              <RoomCodeButton roomCode={roomCode} />
+            </div>
 
             {/* Centre pill */}
             <div

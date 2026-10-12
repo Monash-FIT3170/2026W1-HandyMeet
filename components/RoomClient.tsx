@@ -104,6 +104,7 @@ export default function RoomClient({
         <GestureReactionsBanner />
 
         <MeetingRoom
+          roomCode={roomName}
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
           onLeave={handleLeave}
