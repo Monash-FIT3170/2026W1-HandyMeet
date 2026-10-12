@@ -13,6 +13,8 @@ import {
 } from '@/components/TranscriptionSettings';
 import GestureReactionsBanner from './GestureReactionsBanner';
 import Whiteboard from '@/components/Whiteboard';
+import HelpDialog from '@/components/help/HelpDialog';
+import type { HelpContext } from '@/constants/featureHelp';
 
 export default function RoomClient({
   roomName,
@@ -30,6 +32,7 @@ export default function RoomClient({
   const [transcriptSnapshot, setTranscriptSnapshot] = useState<string[]>([]);
   const isLeavingRef = useRef(false);
   const [whiteboardOpen, setWhiteboardOpen] = useState(false);
+  const [helpContext, setHelpContext] = useState<HelpContext | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const router = useRouter();
 
@@ -110,6 +113,7 @@ export default function RoomClient({
           onCaptionSettingsChange={setCaptionSettings}
           onLeave={handleLeave}
           whiteboardOpen={whiteboardOpen}
+          onOpenHelp={setHelpContext}
           onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
           onLocalVideoRef={(video) => {
             localVideoRef.current = video;
@@ -122,11 +126,18 @@ export default function RoomClient({
 
         <Whiteboard
           isOpen={whiteboardOpen}
+          onOpenHelp={setHelpContext}
           onClose={() => setWhiteboardOpen(false)}
           captionSettings={captionSettings}
           onCaptionSettingsChange={setCaptionSettings}
           localVideoRef={localVideoRef}
         />
+        {helpContext && (
+          <HelpDialog
+            context={helpContext}
+            onClose={() => setHelpContext(null)}
+          />
+        )}
       </LiveKitRoom>
     </main>
   );
