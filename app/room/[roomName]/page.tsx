@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import RoomClient from '@/components/RoomClient';
+import { ROOM_CODE_MAX_LENGTH, USERNAME_MAX_LENGTH } from '@/constants/meeting';
 
 export default async function RoomPage({
   params,
@@ -10,11 +11,16 @@ export default async function RoomPage({
 }) {
   const { roomName } = await params;
   const { username } = await searchParams;
+  const trimmedName = username?.trim() ?? '';
 
-  // A display name is required to join; send nameless visitors back to the form.
-  if (!username?.trim()) {
+  // A valid display name and room code are required; send anything else back to the form.
+  if (
+    !trimmedName ||
+    trimmedName.length > USERNAME_MAX_LENGTH ||
+    decodeURIComponent(roomName).length > ROOM_CODE_MAX_LENGTH
+  ) {
     redirect('/');
   }
 
-  return <RoomClient roomName={roomName} username={username.trim()} />;
+  return <RoomClient roomName={roomName} username={trimmedName} />;
 }

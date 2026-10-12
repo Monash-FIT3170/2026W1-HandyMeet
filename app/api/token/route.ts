@@ -1,6 +1,7 @@
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
+import { ROOM_CODE_MAX_LENGTH, USERNAME_MAX_LENGTH } from '@/constants/meeting';
 
 export async function GET(req: NextRequest) {
   const room = req.nextUrl.searchParams.get('room');
@@ -9,6 +10,16 @@ export async function GET(req: NextRequest) {
   if (!room || !username) {
     return NextResponse.json(
       { error: 'Missing room or username' },
+      { status: 400 },
+    );
+  }
+
+  if (
+    username.length > USERNAME_MAX_LENGTH ||
+    room.length > ROOM_CODE_MAX_LENGTH
+  ) {
+    return NextResponse.json(
+      { error: 'Room or username is too long' },
       { status: 400 },
     );
   }
