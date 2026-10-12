@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import RoomClient from '@/components/RoomClient';
 
 export default async function RoomPage({
@@ -8,7 +9,12 @@ export default async function RoomPage({
   searchParams: Promise<{ username?: string }>;
 }) {
   const { roomName } = await params;
-  const { username = 'Guest' } = await searchParams;
+  const { username } = await searchParams;
 
-  return <RoomClient roomName={roomName} username={username} />;
+  // A display name is required to join; send nameless visitors back to the form.
+  if (!username?.trim()) {
+    redirect('/');
+  }
+
+  return <RoomClient roomName={roomName} username={username.trim()} />;
 }
