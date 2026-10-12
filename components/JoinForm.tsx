@@ -18,6 +18,8 @@ export default function JoinForm() {
   const [username, setUsername] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [joinError, setJoinError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [codeError, setCodeError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const router = useRouter();
 
@@ -25,11 +27,22 @@ export default function JoinForm() {
     setMode('select');
     setRoomCode('');
     setJoinError('');
+    setNameError('');
+    setCodeError('');
+  }
+
+  function validateName(): boolean {
+    if (!username.trim()) {
+      setNameError('Please enter your name.');
+      return false;
+    }
+    setNameError('');
+    return true;
   }
 
   function createRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
-    if (!username.trim()) return;
+    if (!validateName()) return;
     const code = roomCode.trim() || generateRoomCode();
     router.push(
       `/room/${encodeURIComponent(code)}?username=${encodeURIComponent(username.trim())}`,
@@ -39,7 +52,11 @@ export default function JoinForm() {
   async function joinRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
     const trimmedCode = roomCode.trim();
-    if (!username.trim() || !trimmedCode) return;
+    const nameValid = validateName();
+    if (!trimmedCode) {
+      setCodeError('Please enter a room code.');
+    }
+    if (!nameValid || !trimmedCode) return;
 
     setJoinError('');
     setIsJoining(true);
@@ -72,9 +89,7 @@ export default function JoinForm() {
     }
   }
 
-  const canCreate = username.trim().length > 0;
-  const canJoin =
-    username.trim().length > 0 && roomCode.trim().length > 0 && !isJoining;
+  const errorInputClass = `${inputClass} !border-[#DB4C77]`;
 
   return (
     <div className="relative min-h-screen flex flex-col lg:flex-row">
@@ -203,16 +218,25 @@ export default function JoinForm() {
           {mode === 'create' && (
             <form onSubmit={createRoom} className="flex flex-col gap-3">
               <input
-                className={inputClass}
+                className={nameError ? errorInputClass : inputClass}
                 type="text"
                 aria-label="Your name"
                 placeholder="Your name"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setNameError('');
+                }}
                 maxLength={50}
                 autoComplete="off"
                 autoFocus
+                aria-invalid={!!nameError}
               />
+              {nameError && (
+                <p className="text-sm -mt-1" style={{ color: '#F1B7C9' }}>
+                  {nameError}
+                </p>
+              )}
 
               <input
                 className={inputClass}
@@ -227,7 +251,6 @@ export default function JoinForm() {
 
               <button
                 type="submit"
-                disabled={!canCreate}
                 className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
                 onMouseEnter={(e) =>
@@ -245,19 +268,28 @@ export default function JoinForm() {
           {mode === 'join' && (
             <form onSubmit={joinRoom} className="flex flex-col gap-3">
               <input
-                className={inputClass}
+                className={nameError ? errorInputClass : inputClass}
                 type="text"
                 aria-label="Your name"
                 placeholder="Your name"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  setNameError('');
+                }}
                 maxLength={50}
                 autoComplete="off"
                 autoFocus
+                aria-invalid={!!nameError}
               />
+              {nameError && (
+                <p className="text-sm -mt-1" style={{ color: '#F1B7C9' }}>
+                  {nameError}
+                </p>
+              )}
 
               <input
-                className={inputClass}
+                className={codeError ? errorInputClass : inputClass}
                 type="text"
                 aria-label="Room code"
                 placeholder="Room code"
@@ -265,10 +297,17 @@ export default function JoinForm() {
                 onChange={(e) => {
                   setRoomCode(e.target.value.toUpperCase());
                   setJoinError('');
+                  setCodeError('');
                 }}
                 maxLength={20}
                 autoComplete="off"
+                aria-invalid={!!codeError}
               />
+              {codeError && (
+                <p className="text-sm -mt-1" style={{ color: '#F1B7C9' }}>
+                  {codeError}
+                </p>
+              )}
 
               {joinError && (
                 <p className="text-sm" style={{ color: '#F1B7C9' }}>
@@ -278,7 +317,7 @@ export default function JoinForm() {
 
               <button
                 type="submit"
-                disabled={!canJoin}
+                disabled={isJoining}
                 className="w-full rounded-lg px-5 py-3 text-[15px] font-semibold transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
                 style={{ backgroundColor: '#DB4C77', color: '#FCEEF2' }}
                 onMouseEnter={(e) =>
