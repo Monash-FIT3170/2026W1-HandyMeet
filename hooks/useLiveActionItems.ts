@@ -1,9 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DataPacket_Kind, Participant, Room } from 'livekit-client';
 import { ConnectionState, RoomEvent } from 'livekit-client';
 import {
+  isLiveInsightsCoordinatorState,
+  LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
+  LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
+  LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE,
   isLiveInsightsUpdate,
   LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE,
   LIVE_INSIGHTS_TOPIC,
@@ -26,8 +30,25 @@ type UseLiveActionItemsOptions = {
 
 export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   const [actionItems, setActionItems] = useState<LiveActionItem[]>([]);
+  const [coordinatorIdentity, setCoordinatorIdentity] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const actionItemsRef = useRef<LiveActionItem[]>([]);
+
+  const publishCoordinatorMessage = useCallback(
+    (message: object) => {
+      void room.localParticipant
+        .publishData(new TextEncoder().encode(JSON.stringify(message)), {
+          reliable: true,
+          topic: LIVE_INSIGHTS_TOPIC,
+        })
+        .catch((err) => {
+          console.error('Failed to update live insights coordinator:', err);
+        });
+    },
+    [room],
+  );
 
   useEffect(() => {
     const handleData = (
@@ -45,6 +66,11 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
 
       try {
         const data: unknown = JSON.parse(new TextDecoder().decode(payload));
+        if (isLiveInsightsCoordinatorState(data)) {
+          setCoordinatorIdentity(data.coordinatorIdentity);
+          return;
+        }
+
         if (!isLiveInsightsUpdate(data)) return;
 
         const currentItemsById = new Map(
@@ -93,22 +119,43 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
         });
     };
 
+    const announceCoordinatorCandidate = () => {
+      const joinedAt = room.localParticipant.joinedAt?.getTime();
+      if (joinedAt === undefined) return;
+
+      publishCoordinatorMessage({
+        type: LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
+        joinedAt,
+      });
+      publishCoordinatorMessage({
+        type: LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE,
+      });
+    };
+
     const handleParticipantConnected = (participant: Participant) => {
       if (participant.identity.toLowerCase().startsWith('agent-')) {
         requestSnapshot();
+        announceCoordinatorCandidate();
       }
     };
 
-    room.on(RoomEvent.Connected, requestSnapshot);
+    const handleConnected = () => {
+      requestSnapshot();
+      announceCoordinatorCandidate();
+    };
+
+    room.on(RoomEvent.Connected, handleConnected);
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
-    if (room.state === ConnectionState.Connected) requestSnapshot();
+    if (room.state === ConnectionState.Connected) handleConnected();
 
     return () => {
       room.off(RoomEvent.DataReceived, handleData);
-      room.off(RoomEvent.Connected, requestSnapshot);
+      room.off(RoomEvent.Connected, handleConnected);
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
     };
-  }, [room]);
+  }, [publishCoordinatorMessage, room]);
+
+  const isCoordinator = coordinatorIdentity === room.localParticipant.identity;
 
   function updateItem(id: string, patch: Partial<LiveActionItem>) {
     actionItemsRef.current = actionItemsRef.current.map((item) =>
@@ -118,6 +165,8 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   }
 
   function acceptItem(id: string, ownerName?: string) {
+    if (!isCoordinator) return;
+
     updateItem(id, {
       status: 'accepted',
       ...(ownerName ? { owner: ownerName } : {}),
@@ -125,6 +174,8 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   }
 
   function dismissItem(id: string) {
+    if (!isCoordinator) return;
+
     updateItem(id, { status: 'dismissed' });
   }
 
@@ -132,17 +183,35 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
     id: string,
     updates: Partial<Pick<LiveActionItem, 'task' | 'owner' | 'dueDate'>>,
   ) {
+    if (!isCoordinator) return;
+
     updateItem(id, updates);
   }
 
   function assignUser(id: string, assigneeId: string | null) {
+    if (!isCoordinator) return;
+
     updateItem(id, { assigneeId });
+  }
+
+  function transferCoordinator(targetIdentity: string) {
+    if (!isCoordinator || targetIdentity === room.localParticipant.identity) {
+      return;
+    }
+
+    publishCoordinatorMessage({
+      type: LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
+      targetIdentity,
+    });
   }
 
   return {
     actionItems,
     isLoading: false,
     error,
+    coordinatorIdentity,
+    isCoordinator,
+    transferCoordinator,
     acceptItem,
     dismissItem,
     editItem,
