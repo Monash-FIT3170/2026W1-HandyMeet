@@ -8,6 +8,7 @@ import {
   LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
   LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
   LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE,
+  LIVE_INSIGHTS_MUTATION_TYPE,
   isLiveInsightsUpdate,
   LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE,
   LIVE_INSIGHTS_TOPIC,
@@ -45,6 +46,20 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
         })
         .catch((err) => {
           console.error('Failed to update live insights coordinator:', err);
+        });
+    },
+    [room],
+  );
+
+  const publishMutation = useCallback(
+    (message: object) => {
+      void room.localParticipant
+        .publishData(new TextEncoder().encode(JSON.stringify(message)), {
+          reliable: true,
+          topic: LIVE_INSIGHTS_TOPIC,
+        })
+        .catch((err) => {
+          console.error('Failed to update live action item:', err);
         });
     },
     [room],
@@ -167,6 +182,19 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   function acceptItem(id: string, ownerName?: string) {
     if (!isCoordinator) return;
 
+    publishMutation({
+      type: LIVE_INSIGHTS_MUTATION_TYPE,
+      itemId: id,
+      operation: 'accept',
+    });
+    if (ownerName) {
+      publishMutation({
+        type: LIVE_INSIGHTS_MUTATION_TYPE,
+        itemId: id,
+        operation: 'edit',
+        updates: { owner: ownerName },
+      });
+    }
     updateItem(id, {
       status: 'accepted',
       ...(ownerName ? { owner: ownerName } : {}),
@@ -176,6 +204,11 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   function dismissItem(id: string) {
     if (!isCoordinator) return;
 
+    publishMutation({
+      type: LIVE_INSIGHTS_MUTATION_TYPE,
+      itemId: id,
+      operation: 'dismiss',
+    });
     updateItem(id, { status: 'dismissed' });
   }
 
@@ -185,12 +218,24 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   ) {
     if (!isCoordinator) return;
 
+    publishMutation({
+      type: LIVE_INSIGHTS_MUTATION_TYPE,
+      itemId: id,
+      operation: 'edit',
+      updates,
+    });
     updateItem(id, updates);
   }
 
   function assignUser(id: string, assigneeId: string | null) {
     if (!isCoordinator) return;
 
+    publishMutation({
+      type: LIVE_INSIGHTS_MUTATION_TYPE,
+      itemId: id,
+      operation: 'assign',
+      assigneeId,
+    });
     updateItem(id, { assigneeId });
   }
 
