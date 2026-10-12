@@ -18,6 +18,9 @@ const config = {
     '!**/*.d.ts',
     '!**/node_modules/**',
   ],
+  collectCoverage: true,
+  coverageDirectory: '<rootDir>/coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
   coveragePathIgnorePatterns: ['/node_modules/'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
