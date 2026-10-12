@@ -584,6 +584,9 @@ export default function MeetingRoom({
           onDismiss={liveActionItems.dismissItem}
           onAssign={liveActionItems.assignUser}
           participants={participants}
+          canEdit={liveActionItems.isCoordinator}
+          coordinatorIdentity={liveActionItems.coordinatorIdentity}
+          onTransferCoordinator={liveActionItems.transferCoordinator}
         />
       )}
 

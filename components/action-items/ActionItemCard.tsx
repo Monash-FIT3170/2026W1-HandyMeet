@@ -13,6 +13,7 @@ export type ActionItemActionHandlers = {
 type ActionItemCardProps = ActionItemActionHandlers & {
   item: LiveActionItem;
   participants?: ParticipantOption[];
+  canEdit?: boolean;
 };
 
 export default function ActionItemCard({
@@ -22,6 +23,7 @@ export default function ActionItemCard({
   onEdit,
   onDismiss,
   onAssign,
+  canEdit = true,
 }: ActionItemCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftTask, setDraftTask] = useState(item.task);
@@ -74,8 +76,9 @@ export default function ActionItemCard({
           />
         ) : (
           <p
-            className="text-neutral-100 text-sm leading-5 cursor-text"
-            onClick={() => onEdit && setIsEditing(true)}
+            className={`text-neutral-100 text-sm leading-5 ${canEdit ? 'cursor-text' : 'cursor-default'}`}
+            onClick={() => canEdit && onEdit && setIsEditing(true)}
+            aria-disabled={!canEdit}
           >
             {item.task}
           </p>
@@ -97,6 +100,7 @@ export default function ActionItemCard({
             participants={participants}
             assigneeId={item.assigneeId}
             onAssign={(assigneeId) => onAssign(item.id, assigneeId)}
+            disabled={!canEdit}
           />
         </div>
       )}
@@ -107,13 +111,15 @@ export default function ActionItemCard({
             type="button"
             className="bg-primary-500/20 text-primary-200 hover:bg-primary-500/30 flex-1 cursor-pointer rounded-lg px-2 py-1.5 text-xs font-semibold"
             onClick={() => onAccept?.(item.id, assignedParticipant?.name)}
+            disabled={!canEdit}
           >
             Accept
           </button>
           <button
             type="button"
             className="text-neutral-300 hover:text-neutral-100 cursor-pointer rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs font-semibold hover:bg-white/10"
-            onClick={() => setIsEditing(true)}
+            onClick={() => canEdit && setIsEditing(true)}
+            disabled={!canEdit}
           >
             Edit
           </button>
@@ -121,6 +127,7 @@ export default function ActionItemCard({
             type="button"
             className="cursor-pointer rounded-lg border border-red-300/15 bg-red-400/5 px-2 py-1.5 text-xs font-semibold text-red-200 hover:bg-red-400/10"
             onClick={() => onDismiss?.(item.id)}
+            disabled={!canEdit}
           >
             Dismiss
           </button>

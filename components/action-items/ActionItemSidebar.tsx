@@ -53,6 +53,9 @@ type ActionItemSidebarProps = ActionItemActionHandlers & {
   onExpand: () => void;
   children?: ReactNode;
   participants?: ParticipantOption[];
+  canEdit?: boolean;
+  coordinatorIdentity?: string | null;
+  onTransferCoordinator?: (targetIdentity: string) => void;
 };
 
 export default function ActionItemSidebar({
@@ -69,6 +72,9 @@ export default function ActionItemSidebar({
   onDismiss,
   onAssign,
   participants,
+  canEdit = true,
+  coordinatorIdentity = null,
+  onTransferCoordinator,
   children,
 }: ActionItemSidebarProps) {
   const sidebarRef = useRef<HTMLElement>(null);
@@ -77,6 +83,13 @@ export default function ActionItemSidebar({
   const [acceptedOpen, setAcceptedOpen] = useState(false);
   const suggestions = items.filter((item) => item.status === 'suggested');
   const acceptedItems = items.filter((item) => item.status === 'accepted');
+  const coordinator = participants?.find(
+    (participant) => participant.id === coordinatorIdentity,
+  );
+  const handoffOptions = (participants ?? []).filter(
+    (participant) => participant.id !== coordinatorIdentity,
+  );
+  const [handoffTarget, setHandoffTarget] = useState('');
   const right = chatOpen ? 'calc(clamp(200px, 55ch, 60ch) + 1rem)' : '1rem';
   const launcherLabel =
     unreadCount > 0
@@ -216,6 +229,13 @@ export default function ActionItemSidebar({
               />
               <span>{isLoading ? 'Checking' : 'Listening'}</span>
             </div>
+            <p className="text-neutral-500 mt-1 text-xs">
+              {coordinatorIdentity
+                ? canEdit
+                  ? 'You are coordinating'
+                  : `${coordinator?.name ?? coordinatorIdentity} is coordinating`
+                : 'Choosing a coordinator'}
+            </p>
           </div>
 
           <button
@@ -230,6 +250,44 @@ export default function ActionItemSidebar({
             </span>
           </button>
         </header>
+
+        {canEdit && onTransferCoordinator && handoffOptions.length > 0 && (
+          <div className="border-b border-white/10 px-4 py-3">
+            <label
+              className="text-neutral-400 mb-1 block text-xs"
+              htmlFor="action-item-handoff"
+            >
+              Hand off controls
+            </label>
+            <div className="flex gap-2">
+              <select
+                id="action-item-handoff"
+                value={handoffTarget}
+                onChange={(event) => setHandoffTarget(event.target.value)}
+                className="text-neutral-100 min-w-0 flex-1 rounded-lg border border-white/15 bg-white/[0.07] px-2 py-1.5 text-xs"
+              >
+                <option value="">Choose a participant</option>
+                {handoffOptions.map((participant) => (
+                  <option key={participant.id} value={participant.id}>
+                    {participant.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="bg-primary-500/20 text-primary-200 rounded-lg px-2 py-1.5 text-xs font-semibold disabled:cursor-default disabled:opacity-50"
+                disabled={!handoffTarget}
+                onClick={() => {
+                  if (!handoffTarget) return;
+                  onTransferCoordinator(handoffTarget);
+                  setHandoffTarget('');
+                }}
+              >
+                Hand off
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div
@@ -264,6 +322,7 @@ export default function ActionItemSidebar({
                         onDismiss={onDismiss}
                         participants={participants}
                         onAssign={onAssign}
+                        canEdit={canEdit}
                       />
                     ))}
                   </div>
