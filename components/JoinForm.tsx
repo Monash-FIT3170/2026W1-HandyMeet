@@ -3,9 +3,25 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import {
+  ROOM_CODE_MAX_LENGTH,
+  ROOM_CODE_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from '@/constants/meeting';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+function sanitiseRoomCode(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function roomCodeError(code: string): string {
+  if (code.length < ROOM_CODE_MIN_LENGTH) {
+    return `Room code must be at least ${ROOM_CODE_MIN_LENGTH} characters.`;
+  }
+  return '';
 }
 
 const inputClass =
@@ -43,7 +59,15 @@ export default function JoinForm() {
   function createRoom(e: React.BaseSyntheticEvent) {
     e.preventDefault();
     if (!validateName()) return;
-    const code = roomCode.trim() || generateRoomCode();
+    const trimmedCode = roomCode.trim();
+    if (trimmedCode) {
+      const error = roomCodeError(trimmedCode);
+      if (error) {
+        setCodeError(error);
+        return;
+      }
+    }
+    const code = trimmedCode || generateRoomCode();
     router.push(
       `/room/${encodeURIComponent(code)}?username=${encodeURIComponent(username.trim())}`,
     );
@@ -53,10 +77,11 @@ export default function JoinForm() {
     e.preventDefault();
     const trimmedCode = roomCode.trim();
     const nameValid = validateName();
-    if (!trimmedCode) {
-      setCodeError('Please enter a room code.');
-    }
-    if (!nameValid || !trimmedCode) return;
+    const codeValidation = trimmedCode
+      ? roomCodeError(trimmedCode)
+      : 'Please enter a room code.';
+    setCodeError(codeValidation);
+    if (!nameValid || codeValidation) return;
 
     setJoinError('');
     setIsJoining(true);
@@ -175,7 +200,7 @@ export default function JoinForm() {
             {mode === 'select' &&
               'Create a new meeting or join one with a room code.'}
             {mode === 'create' &&
-              "Choose a room code, or leave it blank and we'll generate one."}
+              "Choose a room code (letters and numbers only), or leave it blank and we'll generate one."}
             {mode === 'join' &&
               'Enter the room code your host shared with you.'}
           </p>
@@ -227,7 +252,7 @@ export default function JoinForm() {
                   setUsername(e.target.value);
                   setNameError('');
                 }}
-                maxLength={50}
+                maxLength={USERNAME_MAX_LENGTH}
                 autoComplete="off"
                 autoFocus
                 aria-invalid={!!nameError}
@@ -239,15 +264,24 @@ export default function JoinForm() {
               )}
 
               <input
-                className={inputClass}
+                className={codeError ? errorInputClass : inputClass}
                 type="text"
                 aria-label="Room code (optional)"
                 placeholder="Room code (optional)"
                 value={roomCode}
-                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                maxLength={20}
+                onChange={(e) => {
+                  setRoomCode(sanitiseRoomCode(e.target.value));
+                  setCodeError('');
+                }}
+                maxLength={ROOM_CODE_MAX_LENGTH}
                 autoComplete="off"
+                aria-invalid={!!codeError}
               />
+              {codeError && (
+                <p className="text-sm -mt-1" style={{ color: '#F1B7C9' }}>
+                  {codeError}
+                </p>
+              )}
 
               <button
                 type="submit"
@@ -277,7 +311,7 @@ export default function JoinForm() {
                   setUsername(e.target.value);
                   setNameError('');
                 }}
-                maxLength={50}
+                maxLength={USERNAME_MAX_LENGTH}
                 autoComplete="off"
                 autoFocus
                 aria-invalid={!!nameError}
@@ -295,11 +329,11 @@ export default function JoinForm() {
                 placeholder="Room code"
                 value={roomCode}
                 onChange={(e) => {
-                  setRoomCode(e.target.value.toUpperCase());
+                  setRoomCode(sanitiseRoomCode(e.target.value));
                   setJoinError('');
                   setCodeError('');
                 }}
-                maxLength={20}
+                maxLength={ROOM_CODE_MAX_LENGTH}
                 autoComplete="off"
                 aria-invalid={!!codeError}
               />
