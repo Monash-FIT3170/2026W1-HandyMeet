@@ -43,6 +43,7 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
+import type { HelpContext } from '@/constants/featureHelp';
 import {
   useGestureCaptions,
   type TimestampedTranscriptEntry,
@@ -105,6 +106,7 @@ type MeetingRoomProps = {
   whiteboardOpen: boolean;
   onToggleWhiteboard: () => void;
   onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
+  onOpenHelp: (context: HelpContext) => void;
 };
 
 export default function MeetingRoom({
@@ -114,6 +116,7 @@ export default function MeetingRoom({
   whiteboardOpen,
   onToggleWhiteboard,
   onLocalVideoRef,
+  onOpenHelp,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
@@ -444,9 +447,10 @@ export default function MeetingRoom({
                     />
                   </div>
                 )}
+
                 <button
                   className="lk-button"
-                  aria-pressed={captionsOpen}
+                  aria-expanded={captionsOpen}
                   onClick={() => setCaptionsOpen((v) => !v)}
                   title="Captions"
                 >
@@ -472,6 +476,7 @@ export default function MeetingRoom({
               </div>
 
               {/* Whiteboard */}
+
               <button
                 className="lk-button"
                 aria-pressed={whiteboardOpen}
@@ -507,6 +512,7 @@ export default function MeetingRoom({
               />
 
               {/* Live insights */}
+
               <button
                 className="lk-button"
                 aria-pressed={insightsEnabled}
@@ -533,6 +539,16 @@ export default function MeetingRoom({
                   <circle cx="12" cy="12" r="4" />
                 </svg>
                 Insights
+              </button>
+
+              <button
+                type="button"
+                className="lk-button"
+                aria-haspopup="dialog"
+                onClick={() => onOpenHelp('meeting')}
+              >
+                <span aria-hidden="true">?</span>
+                Help
               </button>
             </div>
 

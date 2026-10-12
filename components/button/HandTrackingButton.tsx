@@ -23,7 +23,7 @@ export default function HandTrackingButton({
     <div style={{ position: 'relative' }}>
       <button
         className="lk-button"
-        aria-pressed={trackingEnabled}
+        aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
         title="Gestures"
       >
@@ -71,6 +71,7 @@ export default function HandTrackingButton({
           {/* Tracking toggle */}
           <button
             onClick={onToggleTracking}
+            aria-pressed={trackingEnabled}
             disabled={!isCameraEnabled}
             style={{
               display: 'flex',
@@ -127,6 +128,7 @@ export default function HandTrackingButton({
           {/* Overlay toggle */}
           <button
             onClick={onToggleOverlay}
+            aria-pressed={overlayEnabled}
             disabled={!trackingEnabled || !isCameraEnabled}
             style={{
               display: 'flex',

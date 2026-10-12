@@ -63,6 +63,7 @@ import {
 } from '@/hooks/useGestureDrawing';
 import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
+import type { HelpContext } from '@/constants/featureHelp';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
 const CURSOR_TOPIC = 'handy-meet-whiteboard-cursors-v1';
@@ -96,6 +97,7 @@ type CursorMessage = {
 interface WhiteboardProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenHelp: (context: HelpContext) => void;
   captionSettings: CaptionSettings;
   onCaptionSettingsChange: (s: CaptionSettings) => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
@@ -133,6 +135,7 @@ const IMPORT_LABEL_KEY = 'handymeet.import-svg';
 export default function Whiteboard({
   isOpen,
   onClose,
+  onOpenHelp,
   captionSettings,
   onCaptionSettingsChange,
   localVideoRef,
@@ -732,6 +735,7 @@ export default function Whiteboard({
         <div className="flex items-center gap-3">
           <button
             onClick={handleToggleGestureDrawing}
+            aria-pressed={gestureDrawingEnabled}
             className={`text-xs px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-2 ${
               gestureDrawingEnabled
                 ? isCameraEnabled
@@ -769,7 +773,7 @@ export default function Whiteboard({
               {currentGesture === DrawingGesture.Fist && (
                 <span className="flex items-center gap-1 text-green-400">
                   <span className="w-2 h-2 bg-green-400 rounded-full" />
-                  Saved to canvas
+                  Stroke finished
                 </span>
               )}
               {!currentGesture && cursorPosition && (
@@ -788,12 +792,22 @@ export default function Whiteboard({
           </span>
         </div>
 
-        <button
-          onClick={onClose}
-          className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
-        >
-          Close
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => onOpenHelp('whiteboard')}
+            className="rounded-md bg-neutral-800 px-3 py-1 text-xs text-neutral-100 hover:bg-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-500"
+          >
+            Help
+          </button>
+          <button
+            onClick={onClose}
+            className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       <input
@@ -867,7 +881,7 @@ export default function Whiteboard({
                 </p>
                 <p className="flex items-center gap-2">
                   <span className="text-green-400">Make fist</span>
-                  <span className="text-neutral-500">= Save stroke</span>
+                  <span className="text-neutral-500">= Finish stroke</span>
                 </p>
               </div>
               <p className="mt-2 text-neutral-500 text-[10px]">
