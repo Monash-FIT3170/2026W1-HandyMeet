@@ -8,6 +8,14 @@ export const LIVE_INSIGHTS_MESSAGE_TYPE = 'live_insights_update';
 export const LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE =
   'live_insights_snapshot_request';
 export const LIVE_INSIGHTS_MUTATION_TYPE = 'live_insights_mutation';
+export const LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE =
+  'live_insights_coordinator_claim';
+export const LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE =
+  'live_insights_coordinator_handoff';
+export const LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE =
+  'live_insights_coordinator_state_request';
+export const LIVE_INSIGHTS_COORDINATOR_STATE_TYPE =
+  'live_insights_coordinator_state';
 
 export type LiveInsightsUpdate = {
   type: typeof LIVE_INSIGHTS_MESSAGE_TYPE;
@@ -16,6 +24,25 @@ export type LiveInsightsUpdate = {
 
 export type LiveInsightsSnapshotRequest = {
   type: typeof LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE;
+};
+
+export type LiveInsightsCoordinatorClaim = {
+  type: typeof LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE;
+  joinedAt: number;
+};
+
+export type LiveInsightsCoordinatorHandoff = {
+  type: typeof LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE;
+  targetIdentity: string;
+};
+
+export type LiveInsightsCoordinatorStateRequest = {
+  type: typeof LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE;
+};
+
+export type LiveInsightsCoordinatorState = {
+  type: typeof LIVE_INSIGHTS_COORDINATOR_STATE_TYPE;
+  coordinatorIdentity: string | null;
 };
 
 export type LiveInsightsMutation =
@@ -128,5 +155,68 @@ export function isLiveInsightsSnapshotRequest(
     typeof value === 'object' &&
     value !== null &&
     (value as { type?: unknown }).type === LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE
+  );
+}
+
+export function isLiveInsightsCoordinatorClaim(
+  value: unknown,
+): value is LiveInsightsCoordinatorClaim {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const message = value as {
+    type?: unknown;
+    joinedAt?: unknown;
+  };
+
+  return (
+    message.type === LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE &&
+    typeof message.joinedAt === 'number' &&
+    Number.isFinite(message.joinedAt) &&
+    message.joinedAt >= 0
+  );
+}
+
+export function isLiveInsightsCoordinatorHandoff(
+  value: unknown,
+): value is LiveInsightsCoordinatorHandoff {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const message = value as {
+    type?: unknown;
+    targetIdentity?: unknown;
+  };
+
+  return (
+    message.type === LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE &&
+    typeof message.targetIdentity === 'string' &&
+    message.targetIdentity.length > 0
+  );
+}
+
+export function isLiveInsightsCoordinatorStateRequest(
+  value: unknown,
+): value is LiveInsightsCoordinatorStateRequest {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { type?: unknown }).type ===
+      LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE
+  );
+}
+
+export function isLiveInsightsCoordinatorState(
+  value: unknown,
+): value is LiveInsightsCoordinatorState {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const message = value as {
+    type?: unknown;
+    coordinatorIdentity?: unknown;
+  };
+
+  return (
+    message.type === LIVE_INSIGHTS_COORDINATOR_STATE_TYPE &&
+    (typeof message.coordinatorIdentity === 'string' ||
+      message.coordinatorIdentity === null)
   );
 }
