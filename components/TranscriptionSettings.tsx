@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { styles } from './TranscriptionSettings.style';
 
 export type CaptionSettings = {
@@ -31,6 +32,11 @@ const BG_COLOR_PRESETS = [
   { label: 'None', value: 'rgba(0,0,0,0)' },
 ];
 
+// White has no saturation, so moving only the native picker's hue slider
+// leaves the selected colour white. Start it at the saturated end instead.
+const pickerStartColor = (color: string) =>
+  color.toLowerCase() === '#ffffff' ? '#ff0000' : color;
+
 type Props = {
   settings: CaptionSettings;
   onChange: (settings: CaptionSettings) => void;
@@ -44,10 +50,16 @@ export default function TranscriptionSettings({
   open,
   onClose,
 }: Props) {
+  const [pickerColor, setPickerColor] = useState(() =>
+    pickerStartColor(settings.textColor),
+  );
   const update = (partial: Partial<CaptionSettings>) =>
     onChange({ ...settings, ...partial });
 
-  const reset = () => onChange({ ...defaultCaptionSettings });
+  const reset = () => {
+    setPickerColor(pickerStartColor(defaultCaptionSettings.textColor));
+    onChange({ ...defaultCaptionSettings });
+  };
 
   if (!open) return null;
 
@@ -128,7 +140,10 @@ export default function TranscriptionSettings({
               <button
                 key={preset.value}
                 title={preset.label}
-                onClick={() => update({ textColor: preset.value })}
+                onClick={() => {
+                  setPickerColor(pickerStartColor(preset.value));
+                  update({ textColor: preset.value });
+                }}
                 style={{
                   ...styles.colorButton,
                   border: `2px solid ${settings.textColor === preset.value ? 'white' : 'rgba(255,255,255,0.2)'}`,
@@ -140,13 +155,44 @@ export default function TranscriptionSettings({
                 }}
               />
             ))}
-            <input
-              type="color"
-              value={settings.textColor}
-              onChange={(e) => update({ textColor: e.target.value })}
-              title="Custom colour"
-              style={styles.colorInput}
-            />
+            <label className="relative inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-white/40 focus-within:ring-2 focus-within:ring-white">
+              <span
+                aria-hidden="true"
+                className="flex h-6 w-6 items-center justify-center rounded-full"
+                style={{
+                  background:
+                    'conic-gradient(#ef4444, #facc15, #22c55e, #3b82f6, #a855f7, #ef4444)',
+                }}
+              >
+                <svg
+                  width="17"
+                  height="17"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+                >
+                  <path d="m2 22 1-1h3l9-9" />
+                  <path d="M3 21v-3l9-9" />
+                  <path d="M14.5 6.5 17 9" />
+                  <path d="M11 9 15 5l4 4-4 4" />
+                  <path d="m16 4 2-2 4 4-2 2" />
+                </svg>
+              </span>
+              <input
+                type="color"
+                aria-label="Choose custom caption colour"
+                value={pickerColor}
+                onChange={(e) => {
+                  setPickerColor(e.target.value);
+                  update({ textColor: e.target.value });
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
           </div>
         </div>
 

@@ -105,16 +105,6 @@ export const styles = {
     transition: 'transform 0.15s, border-color 0.15s',
   },
 
-  colorInput: {
-    width: '1.75rem',
-    height: '1.75rem',
-    borderRadius: '50%',
-    border: '2px solid rgba(255,255,255,0.2)',
-    padding: 0,
-    cursor: 'pointer',
-    backgroundColor: 'transparent',
-  },
-
   resetButton: {
     width: '100%',
     justifyContent: 'center',
