@@ -44,6 +44,7 @@ function createTestRoom(): TestRoom {
         type: LIVE_INSIGHTS_MESSAGE_TYPE,
         actionItems: [
           {
+            id: 'agent-action-item-test-1',
             task: SUGGESTED_TASK,
             owner: 'Param',
             dueDate: null,

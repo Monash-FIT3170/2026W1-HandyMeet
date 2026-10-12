@@ -20,10 +20,6 @@ export type LiveActionItem = {
   assigneeId: string | null;
 };
 
-function makeId(): string {
-  return crypto.randomUUID();
-}
-
 type UseLiveActionItemsOptions = {
   room: Room;
 };
@@ -51,14 +47,21 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
         const data: unknown = JSON.parse(new TextDecoder().decode(payload));
         if (!isLiveInsightsUpdate(data)) return;
 
-        const currentItems = actionItemsRef.current;
-        const nextItems = data.actionItems.map((item, index) => {
-          const existingItem = currentItems[index];
-          if (existingItem) return existingItem;
+        const currentItemsById = new Map(
+          actionItemsRef.current.map((item) => [item.id, item]),
+        );
+        const nextItems = data.actionItems.map((item) => {
+          const existingItem = currentItemsById.get(item.id);
+          if (existingItem) {
+            return {
+              ...item,
+              status: existingItem.status,
+              assigneeId: existingItem.assigneeId,
+            };
+          }
 
           return {
             ...item,
-            id: makeId(),
             status: 'suggested' as const,
             assigneeId: null,
           };
