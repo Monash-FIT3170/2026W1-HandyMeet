@@ -48,6 +48,8 @@ function createTestRoom(): TestRoom {
             task: SUGGESTED_TASK,
             owner: 'Param',
             dueDate: null,
+            status: 'suggested',
+            assigneeId: null,
           },
         ],
       });
