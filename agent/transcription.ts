@@ -13,8 +13,12 @@ import {
   type LiveInsightActionItem,
 } from '../helpers/liveInsights';
 import {
+  isLiveInsightsCoordinatorClaim,
+  isLiveInsightsCoordinatorHandoff,
+  isLiveInsightsCoordinatorStateRequest,
   LIVE_INSIGHTS_MESSAGE_TYPE,
   isLiveInsightsSnapshotRequest,
+  LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
   LIVE_INSIGHTS_TOPIC,
 } from '../helpers/liveInsightsProtocol';
 import { randomUUID } from 'node:crypto';
@@ -36,6 +40,9 @@ export default defineAgent({
     const sessions = new Map<string, voice.AgentSession>();
     const pendingTranscriptLines: string[] = [];
     const knownActionItems: LiveInsightActionItem[] = [];
+    const participantClaims = new Map<string, number>();
+    let coordinatorIdentity: string | null = null;
+    let coordinatorWasHandedOff = false;
     let collectionTimer: ReturnType<typeof setTimeout> | undefined;
     let collectionInFlight = false;
 
@@ -59,6 +66,45 @@ export default defineAgent({
       });
     };
 
+    const publishCoordinatorState = async (destinationIdentity?: string) => {
+      const agentParticipant = ctx.agent;
+      if (!agentParticipant) {
+        throw new Error('Agent participant is unavailable.');
+      }
+
+      const message = JSON.stringify({
+        type: LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
+        coordinatorIdentity,
+      });
+
+      await agentParticipant.publishData(new TextEncoder().encode(message), {
+        reliable: true,
+        topic: LIVE_INSIGHTS_TOPIC,
+        ...(destinationIdentity
+          ? { destination_identities: [destinationIdentity] }
+          : {}),
+      });
+    };
+
+    const electCoordinator = () => {
+      const electedParticipant = [...participantClaims.entries()].sort(
+        ([identity, joinedAt], [otherIdentity, otherJoinedAt]) =>
+          joinedAt - otherJoinedAt || identity.localeCompare(otherIdentity),
+      )[0];
+
+      return electedParticipant?.[0] ?? null;
+    };
+
+    const publishElectedCoordinator = () => {
+      const electedCoordinator = electCoordinator();
+      if (electedCoordinator === coordinatorIdentity) return;
+
+      coordinatorIdentity = electedCoordinator;
+      void publishCoordinatorState().catch((error) => {
+        console.error('Live insights coordinator update failed:', error);
+      });
+    };
+
     ctx.room.on('dataReceived', (payload, participant, _kind, topic) => {
       if (
         topic !== LIVE_INSIGHTS_TOPIC ||
@@ -70,11 +116,40 @@ export default defineAgent({
 
       try {
         const message: unknown = JSON.parse(new TextDecoder().decode(payload));
-        if (!isLiveInsightsSnapshotRequest(message)) return;
+        if (isLiveInsightsSnapshotRequest(message)) {
+          void publishActionItems(participant.identity).catch((error) => {
+            console.error('Live action item snapshot failed:', error);
+          });
+          return;
+        }
 
-        void publishActionItems(participant.identity).catch((error) => {
-          console.error('Live action item snapshot failed:', error);
-        });
+        if (isLiveInsightsCoordinatorClaim(message)) {
+          participantClaims.set(participant.identity, message.joinedAt);
+          if (!coordinatorWasHandedOff) publishElectedCoordinator();
+          void publishCoordinatorState(participant.identity).catch((error) => {
+            console.error('Live insights coordinator state failed:', error);
+          });
+          return;
+        }
+
+        if (isLiveInsightsCoordinatorStateRequest(message)) {
+          void publishCoordinatorState(participant.identity).catch((error) => {
+            console.error('Live insights coordinator state failed:', error);
+          });
+          return;
+        }
+
+        if (
+          isLiveInsightsCoordinatorHandoff(message) &&
+          participant.identity === coordinatorIdentity &&
+          participantClaims.has(message.targetIdentity)
+        ) {
+          coordinatorIdentity = message.targetIdentity;
+          coordinatorWasHandedOff = true;
+          void publishCoordinatorState().catch((error) => {
+            console.error('Live insights coordinator handoff failed:', error);
+          });
+        }
       } catch (error) {
         console.error('Failed to parse live insight request:', error);
       }
@@ -185,6 +260,12 @@ export default defineAgent({
       const session = sessions.get(participant.identity);
       session?.close();
       sessions.delete(participant.identity);
+
+      participantClaims.delete(participant.identity);
+      if (participant.identity === coordinatorIdentity) {
+        coordinatorWasHandedOff = false;
+        publishElectedCoordinator();
+      }
     });
   },
 });
