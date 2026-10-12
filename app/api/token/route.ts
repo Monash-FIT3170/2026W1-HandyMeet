@@ -1,4 +1,4 @@
-import { AccessToken } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 
@@ -24,10 +24,18 @@ export async function GET(req: NextRequest) {
   }
 
   const identity = `${username}-${randomUUID()}`;
+  const url = process.env.LIVEKIT_URL;
+  const name = url
+    ? await resolveDisplayName(
+        new RoomServiceClient(url, apiKey, apiSecret),
+        room,
+        username,
+      )
+    : username;
 
   const token = new AccessToken(apiKey, apiSecret, {
     identity,
-    name: username,
+    name,
     ttl: '10m',
   });
 
@@ -41,4 +49,46 @@ export async function GET(req: NextRequest) {
   const jwt = await token.toJwt();
 
   return NextResponse.json({ token: jwt });
+}
+
+/**
+ * Numbers participants who share a display name so they can be told apart,
+ */
+async function resolveDisplayName(
+  roomService: RoomServiceClient,
+  room: string,
+  username: string,
+): Promise<string> {
+  let participants;
+  try {
+    participants = await roomService.listParticipants(room);
+  } catch {
+    // Room doesn't exist yet (e.g. creating a meeting), so the name is free.
+    return username;
+  }
+
+  const escaped = username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const numbered = new RegExp(`^${escaped}\\((\\d+)\\)$`);
+
+  let unnumbered: string | undefined;
+  let highest = 0;
+  for (const p of participants) {
+    if (p.name === username) {
+      unnumbered = p.identity;
+      continue;
+    }
+    const match = p.name.match(numbered);
+    if (match) highest = Math.max(highest, Number(match[1]));
+  }
+
+  if (!unnumbered && highest === 0) return username;
+
+  if (unnumbered) {
+    highest += 1;
+    await roomService
+      .updateParticipant(room, unnumbered, { name: `${username}(${highest})` })
+      .catch(() => {});
+  }
+
+  return `${username}(${highest + 1})`;
 }
