@@ -2,10 +2,14 @@ const GROQ_CHAT_COMPLETIONS_URL =
   'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'openai/gpt-oss-120b';
 
-export type LiveInsightActionItem = {
+export type LiveInsightActionItemFields = {
   task: string;
   owner: string | null;
   dueDate: string | null;
+};
+
+export type LiveInsightActionItem = LiveInsightActionItemFields & {
+  id: string;
 };
 
 type ExtractLiveActionItemsOptions = {
@@ -22,7 +26,7 @@ export async function extractLiveActionItems({
   apiKey,
   fetchImpl = fetch,
   today = new Date(),
-}: ExtractLiveActionItemsOptions): Promise<LiveInsightActionItem[]> {
+}: ExtractLiveActionItemsOptions): Promise<LiveInsightActionItemFields[]> {
   if (!apiKey) {
     throw new Error('GROQ_API_KEY is missing from .env.local.');
   }
@@ -84,6 +88,7 @@ Rules:
   return parsed &&
     typeof parsed === 'object' &&
     Array.isArray((parsed as { newActionItems?: unknown }).newActionItems)
-    ? (parsed as { newActionItems: LiveInsightActionItem[] }).newActionItems
+    ? (parsed as { newActionItems: LiveInsightActionItemFields[] })
+        .newActionItems
     : [];
 }

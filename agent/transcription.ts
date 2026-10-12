@@ -9,6 +9,7 @@ import * as deepgram from '@livekit/agents-plugin-deepgram';
 import { fileURLToPath } from 'node:url';
 import {
   extractLiveActionItems,
+  type LiveInsightActionItemFields,
   type LiveInsightActionItem,
 } from '../helpers/liveInsights';
 import {
@@ -16,6 +17,7 @@ import {
   isLiveInsightsSnapshotRequest,
   LIVE_INSIGHTS_TOPIC,
 } from '../helpers/liveInsightsProtocol';
+import { randomUUID } from 'node:crypto';
 
 const COLLECTION_DELAY_MS = 1000;
 
@@ -97,13 +99,24 @@ export default defineAgent({
       try {
         const newActionItems = await extractLiveActionItems({
           transcript: transcriptLines.join('\n'),
-          knownActionItems,
+          knownActionItems: knownActionItems.map(
+            ({ task, owner, dueDate }) => ({
+              task,
+              owner,
+              dueDate,
+            }),
+          ),
           apiKey,
         });
 
         if (newActionItems.length === 0) return;
 
-        knownActionItems.push(...newActionItems);
+        knownActionItems.push(
+          ...newActionItems.map((actionItem: LiveInsightActionItemFields) => ({
+            ...actionItem,
+            id: `agent-action-item-${randomUUID()}`,
+          })),
+        );
         await publishActionItems();
       } catch (error) {
         knownActionItems.splice(previousItemCount);
