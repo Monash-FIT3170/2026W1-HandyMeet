@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 function generateRoomCode(): string {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -35,7 +36,15 @@ export default function JoinForm() {
   const canAct = username.trim().length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="relative min-h-screen flex flex-col lg:flex-row">
+      <Link
+        href="/help"
+        aria-label="Help and accessibility guide"
+        title="Help and accessibility guide"
+        className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-neutral-600 bg-neutral-900 text-lg font-semibold text-primary-200 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-primary-500"
+      >
+        <span aria-hidden="true">?</span>
+      </Link>
       <div
         className="relative lg:w-1/2 flex flex-col justify-between overflow-hidden p-12"
         style={{ backgroundColor: '#10599A' }}
@@ -102,6 +111,7 @@ export default function JoinForm() {
             <input
               className={inputClass}
               type="text"
+              aria-label="Your name"
               placeholder="Your name"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
@@ -113,6 +123,8 @@ export default function JoinForm() {
               <input
                 className={`${inputClass} flex-1 min-w-0`}
                 type="text"
+                aria-label="Room code"
+                aria-describedby="room-code-help"
                 placeholder="Room code"
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
@@ -121,6 +133,10 @@ export default function JoinForm() {
               />
             </div>
 
+            <p id="room-code-help" className="text-sm text-neutral-200">
+              Leave the room code empty to create a meeting, or enter the
+              organiser’s code to join.
+            </p>
             <button
               type="button"
               disabled={!canAct}
