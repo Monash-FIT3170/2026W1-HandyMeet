@@ -216,15 +216,59 @@ HandyMeet consists of several cooperating components.
 
 ### Next.js Application
 
+The main application is built on the Next.js and React framework.
+
+This handles:
+
+- All meeting user interfaces and visual features
+- Meeting creation and joining
+- Video conferencing controls
+
+Next.js API routes are also used for simple backend functionality such as creation of LiveKit room tokens and application routing.
+
 ### LiveKit
+
+LiveKit is used to provide the background real time communications infrastructure.
+
+This handles:
+
+- Audio communication
+- Video communication
+- Screen sharing
+- Message communication
 
 ### LiveKit Agent
 
+LiveKit agent is a server side agent in TypeScript which joins all active meetings through LiveKit.
+
+Its responsibilities include:
+
+- Receiving meeting audio
+- Sending captured audio to Deepgram
+- Producing captions and transcript
+
 ### Deepgram
+
+Deepgram performs the actual speech-to-text conversion.
+
+Meeting audio is sent via the LiveKit agent to Deepgram where it is then converted into transcript/caption data which is displayed in the application.
+
+### Gemini
+
+Gemini is used to generate a meeting summary after a meeting is completed from the captured transcript.
 
 ### Groq
 
+Groq is used within the live action items feature where it identifies potential action items from the live transcript being captured.
+
 ### MediaPipe and TensorFlow.js
+
+MediaPipe and TensorFlow.js is used for the hand tracking and gesture recognition locally within the user's browser.
+MediaPipe looks at the webcam frames and identfies the 42 hand landmarks (21 landmarks per hand).
+
+These landmark coordinates are passed into the custom trained TensorFlow.js model which classifies the detected hand pose into one of the trained and supported signs/gestures.
+
+Since this processing is done within the browser, webcam frames do not need to be sent to any gesture-recognition server.
 
 ## Sign Language and Gesture Recognition Model
 
