@@ -5,6 +5,7 @@ import {
   voice,
   ServerOptions,
 } from '@livekit/agents';
+import { RoomEvent } from '@livekit/rtc-node';
 import * as deepgram from '@livekit/agents-plugin-deepgram';
 import { fileURLToPath } from 'node:url';
 import {
@@ -106,7 +107,7 @@ export default defineAgent({
       });
     };
 
-    ctx.room.on('dataReceived', (payload, participant, _kind, topic) => {
+    ctx.room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
       if (
         topic !== LIVE_INSIGHTS_TOPIC ||
         !participant ||
@@ -279,12 +280,12 @@ export default defineAgent({
     }
 
     // Add agent when a new person joins
-    ctx.room.on('participantConnected', async (participant) => {
+    ctx.room.on(RoomEvent.ParticipantConnected, async (participant) => {
       await startTranscribingParticipant(participant.identity);
     });
 
     // Remove agent when person leaves
-    ctx.room.on('participantDisconnected', (participant) => {
+    ctx.room.on(RoomEvent.ParticipantDisconnected, (participant) => {
       const session = sessions.get(participant.identity);
       session?.close();
       sessions.delete(participant.identity);
