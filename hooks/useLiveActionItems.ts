@@ -6,6 +6,8 @@ import { ConnectionState, RoomEvent } from 'livekit-client';
 import type { LiveInsightActionItem } from '@/helpers/liveInsights';
 import {
   isLiveInsightsCoordinatorState,
+  isLiveInsightsCoordinatorClaim,
+  isLiveInsightsCoordinatorHandoff,
   LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
   LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
   LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE,
@@ -30,6 +32,34 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
   );
   const [error, setError] = useState<string | null>(null);
   const actionItemsRef = useRef<LiveActionItem[]>([]);
+  const participantClaimsRef = useRef(new Map<string, number>());
+  const agentStateReceivedRef = useRef(false);
+  const localJoinedAtRef = useRef<number | null>(null);
+  const coordinatorIdentityRef = useRef<string | null>(null);
+
+  const updateCoordinatorIdentity = useCallback((identity: string | null) => {
+    coordinatorIdentityRef.current = identity;
+    setCoordinatorIdentity(identity);
+  }, []);
+
+  const electFallbackCoordinator = useCallback(() => {
+    if (agentStateReceivedRef.current) return;
+
+    const electedParticipant = [...participantClaimsRef.current.entries()].sort(
+      ([identity, joinedAt], [otherIdentity, otherJoinedAt]) =>
+        joinedAt - otherJoinedAt || identity.localeCompare(otherIdentity),
+    )[0];
+
+    updateCoordinatorIdentity(electedParticipant?.[0] ?? null);
+  }, [updateCoordinatorIdentity]);
+
+  const getLocalJoinedAt = useCallback(() => {
+    if (localJoinedAtRef.current !== null) return localJoinedAtRef.current;
+
+    localJoinedAtRef.current =
+      room.localParticipant.joinedAt?.getTime() ?? Date.now();
+    return localJoinedAtRef.current;
+  }, [room]);
 
   const publishCoordinatorMessage = useCallback(
     (message: object) => {
@@ -66,17 +96,33 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
       _kind?: DataPacket_Kind,
       topic?: string,
     ) => {
-      if (
-        topic !== LIVE_INSIGHTS_TOPIC ||
-        !sender?.identity.toLowerCase().startsWith('agent-')
-      ) {
-        return;
-      }
+      if (topic !== LIVE_INSIGHTS_TOPIC || !sender) return;
 
       try {
         const data: unknown = JSON.parse(new TextDecoder().decode(payload));
+
+        if (isLiveInsightsCoordinatorClaim(data)) {
+          participantClaimsRef.current.set(sender.identity, data.joinedAt);
+          electFallbackCoordinator();
+          return;
+        }
+
+        if (isLiveInsightsCoordinatorHandoff(data)) {
+          if (
+            !agentStateReceivedRef.current &&
+            sender.identity === coordinatorIdentityRef.current &&
+            participantClaimsRef.current.has(data.targetIdentity)
+          ) {
+            updateCoordinatorIdentity(data.targetIdentity);
+          }
+          return;
+        }
+
+        if (!sender.identity.toLowerCase().startsWith('agent-')) return;
+
         if (isLiveInsightsCoordinatorState(data)) {
-          setCoordinatorIdentity(data.coordinatorIdentity);
+          agentStateReceivedRef.current = true;
+          updateCoordinatorIdentity(data.coordinatorIdentity);
           return;
         }
 
@@ -111,8 +157,12 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
     };
 
     const announceCoordinatorCandidate = () => {
-      const joinedAt = room.localParticipant.joinedAt?.getTime();
-      if (joinedAt === undefined) return;
+      const joinedAt = getLocalJoinedAt();
+      participantClaimsRef.current.set(
+        room.localParticipant.identity,
+        joinedAt,
+      );
+      electFallbackCoordinator();
 
       publishCoordinatorMessage({
         type: LIVE_INSIGHTS_COORDINATOR_CLAIM_TYPE,
@@ -127,24 +177,63 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
       if (participant.identity.toLowerCase().startsWith('agent-')) {
         requestSnapshot();
         announceCoordinatorCandidate();
+        return;
+      }
+
+      const joinedAt = participant.joinedAt?.getTime();
+      if (joinedAt !== undefined) {
+        participantClaimsRef.current.set(participant.identity, joinedAt);
+        electFallbackCoordinator();
       }
     };
 
     const handleConnected = () => {
       requestSnapshot();
       announceCoordinatorCandidate();
+
+      for (const participant of room.remoteParticipants.values()) {
+        const joinedAt = participant.joinedAt?.getTime();
+        if (
+          !participant.identity.toLowerCase().startsWith('agent-') &&
+          joinedAt !== undefined
+        ) {
+          participantClaimsRef.current.set(participant.identity, joinedAt);
+        }
+      }
+      electFallbackCoordinator();
+    };
+
+    const handleParticipantDisconnected = (participant: Participant) => {
+      participantClaimsRef.current.delete(participant.identity);
+
+      if (participant.identity.toLowerCase().startsWith('agent-')) {
+        agentStateReceivedRef.current = false;
+      }
+
+      electFallbackCoordinator();
     };
 
     room.on(RoomEvent.Connected, handleConnected);
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected);
+    room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected);
     if (room.state === ConnectionState.Connected) handleConnected();
 
     return () => {
       room.off(RoomEvent.DataReceived, handleData);
       room.off(RoomEvent.Connected, handleConnected);
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected);
+      room.off(
+        RoomEvent.ParticipantDisconnected,
+        handleParticipantDisconnected,
+      );
     };
-  }, [publishCoordinatorMessage, room]);
+  }, [
+    electFallbackCoordinator,
+    getLocalJoinedAt,
+    publishCoordinatorMessage,
+    room,
+    updateCoordinatorIdentity,
+  ]);
 
   const isCoordinator = coordinatorIdentity === room.localParticipant.identity;
 
@@ -224,6 +313,10 @@ export function useLiveActionItems({ room }: UseLiveActionItemsOptions) {
       type: LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
       targetIdentity,
     });
+
+    if (!agentStateReceivedRef.current) {
+      updateCoordinatorIdentity(targetIdentity);
+    }
   }
 
   return {
