@@ -43,7 +43,7 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
-import RoomCodeButton from './RoomCodeButton';
+import RoomCodeButton from '../button/RoomCodeButton';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
