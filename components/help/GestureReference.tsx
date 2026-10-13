@@ -106,6 +106,7 @@ function GestureCard({
         ref={dialogRef}
         aria-label={`${title} gesture reference`}
         onKeyDown={(event) => event.stopPropagation()}
+        onCancel={(event) => event.stopPropagation()}
         onClick={(event) => {
           if (event.target === event.currentTarget) dialogRef.current?.close();
         }}
