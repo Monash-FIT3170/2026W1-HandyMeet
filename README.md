@@ -317,20 +317,20 @@ Detailed instructions are in `./scripts/gesture-recognition/README.md`. This inc
 
 Student email accounts may eventually expire, so **GitHub accounts should be treated as the primary long-term contact method** where possible.
 
-| Name               | GitHub         | Monash Email                                                      | Long-term Contact                                     |
-| ------------------ | -------------- | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| Richard Li         | RichardLi88    | [rlii0102@student.monash.edu](mailto:rlii0102@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Dasun Udugoda      | Dasun-Udugoda  | [wudu0002@student.monash.edu](mailto:wudu0002@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| May McGrath        | maymcgrath     | [mmcg0028@student.monash.edu](mailto:mmcg0028@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Michael Alexander  | mimgl          | [male0019@student.monash.edu](mailto:male0019@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Param Dhaliwal     | prmdhaliwal    | [pdha0007@student.monash.edu](mailto:pdha0007@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Sebastian Aisea    | sebastianaisea | [sais0004@student.monash.edu](mailto:sais0004@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Jared Kosem        | niceguys72     | [jkos0011@student.monash.edu](mailto:jkos0011@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| May Tran           | maytrran       | [mtra0067@student.monash.edu](mailto:mtra0067@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Bita Afshar        | bitafsh        | [bafs0001@student.monash.edu](mailto:bafs0001@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Naveen Rajeev      | naveenrajeev16 | [nraj0031@student.monash.edu](mailto:nraj0031@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Tam Quan           | TamvyQuan      | [tqua0013@student.monash.edu](mailto:tqua0013@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Shen-Kit Hia       | shen-kit       | [shia0001@student.monash.edu](mailto:shia0001@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/shen-kit-hia/) |
-| Sinan Ummu         | sua22          | [summ0001@student.monash.edu](mailto:summ0001@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Keith Ng           | kngg0077       | [kngg0077@student.monash.edu](mailto:kngg0077@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
-| Neil Savio Pereira | neilsbp        | [nper0041@student.monash.edu](mailto:nper0041@student.monash.edu) | [LinkedIn](https://www.linkedin.com/in/)              |
+| Name               | GitHub         | Monash Email                                                      | Long-term Contact                                      |
+| ------------------ | -------------- | ----------------------------------------------------------------- | ------------------------------------------------------ |
+| Richard Li         | RichardLi88    | [rlii0102@student.monash.edu](mailto:rlii0102@student.monash.edu) | `https://www.linkedin.com/in/richard-li-swe/`          |
+| Dasun Udugoda      | Dasun-Udugoda  | [wudu0002@student.monash.edu](mailto:wudu0002@student.monash.edu) | `https://www.linkedin.com/in/dasun-udugoda-468936299/` |
+| May McGrath        | maymcgrath     | [mmcg0028@student.monash.edu](mailto:mmcg0028@student.monash.edu) | `https://www.linkedin.com/in/maymcgrath/`              |
+| Michael Alexander  | mimgl          | [male0019@student.monash.edu](mailto:male0019@student.monash.edu) | `https://www.linkedin.com/in/michael-alexander2/`      |
+| Param Dhaliwal     | prmdhaliwal    | [pdha0007@student.monash.edu](mailto:pdha0007@student.monash.edu) | `https://www.linkedin.com/in/prmdhaliwal/`             |
+| Sebastian Aisea    | sebastianaisea | [sais0004@student.monash.edu](mailto:sais0004@student.monash.edu) | `sebastianaisea5@gmail.com`                            |
+| Jared Kosem        | niceguys72     | [jkos0011@student.monash.edu](mailto:jkos0011@student.monash.edu) | `https://www.linkedin.com/in/jared-kosem-0b09ba242/`   |
+| May Tran           | maytrran       | [mtra0067@student.monash.edu](mailto:mtra0067@student.monash.edu) | `https://www.linkedin.com/in/may-tran-b870b222b/`      |
+| Bita Afshar        | bitafsh        | [bafs0001@student.monash.edu](mailto:bafs0001@student.monash.edu) | `https://www.linkedin.com/in/bita-afshar-3140632b9/`   |
+| Naveen Rajeev      | naveenrajeev16 | [nraj0031@student.monash.edu](mailto:nraj0031@student.monash.edu) | `https://www.linkedin.com/in/naveen-rajeev-19b191334/` |
+| Tam Quan           | TamvyQuan      | [tqua0013@student.monash.edu](mailto:tqua0013@student.monash.edu) | `https://www.linkedin.com/in/tam-quan/`                |
+| Shen-Kit Hia       | shen-kit       | [shia0001@student.monash.edu](mailto:shia0001@student.monash.edu) | `https://www.linkedin.com/in/shen-kit-hia/`            |
+| Sinan Ummu         | sua22          | [summ0001@student.monash.edu](mailto:summ0001@student.monash.edu) | `https://www.linkedin.com/in/sinan-ummu/`              |
+| Keith Ng           | kngg0077       | [kngg0077@student.monash.edu](mailto:kngg0077@student.monash.edu) | `https://linkedin.com/in/k31thng`                      |
+| Neil Savio Pereira | neilsbp        | [nper0041@student.monash.edu](mailto:nper0041@student.monash.edu) | `https://www.linkedin.com/in/neil-pereira-5b0858247/`  |
