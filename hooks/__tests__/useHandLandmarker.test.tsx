@@ -1,7 +1,6 @@
 /** @jest-environment jsdom */
 
-import React from 'react';
-import { act, render } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useHandLandmarker } from '../useHandLandmarker';
 import {
   HandLandmarker,
@@ -28,7 +27,8 @@ jest.mock('@/helpers/gestures/handLandmarkFeatures', () => ({
   buildHandFeatureVectors: jest.fn(() => ({})),
 }));
 
-// --- Fake RAF: Node has neither requestAnimationFrame nor cancelAnimationFrame ---
+// --- Fake RAF: jsdom ships requestAnimationFrame, but we want deterministic
+// manual control over when frames fire, so we still stub it ourselves. ---
 let rafCallbacks: FrameRequestCallback[] = [];
 let rafIdCounter = 0;
 
@@ -40,18 +40,34 @@ function flushRAF() {
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-// --- Fake video/canvas: plain objects, no real DOM needed under node env ---
+// --- Fake video/canvas: jsdom gives us real HTMLVideoElement/HTMLCanvasElement
+// shells, but jsdom's canvas has no real 2D context implementation, so we still
+// stub getContext. Using real elements (rather than plain objects) means any
+// property access the hook makes that we *didn't* think to mock (e.g. instanceof
+// checks, nodeName) behaves correctly instead of silently returning undefined. ---
 function makeVideoMock(overrides: Partial<HTMLVideoElement> = {}) {
-  return {
+  const video = document.createElement('video');
+
+  const defaults: Partial<HTMLVideoElement> = {
     readyState: 4,
     currentTime: 1,
     videoWidth: 640,
     videoHeight: 480,
     ...overrides,
-  } as unknown as HTMLVideoElement;
+  };
+
+  for (const [key, value] of Object.entries(defaults)) {
+    Object.defineProperty(video, key, {
+      value,
+      configurable: true,
+      writable: true,
+    });
+  }
+  return video as HTMLVideoElement;
 }
 
 function makeCanvasMock(overrides: Partial<HTMLCanvasElement> = {}) {
+  const canvas = document.createElement('canvas');
   const ctx = {
     clearRect: jest.fn(),
     save: jest.fn(),
@@ -59,55 +75,25 @@ function makeCanvasMock(overrides: Partial<HTMLCanvasElement> = {}) {
     translate: jest.fn(),
     restore: jest.fn(),
   };
-  const canvas = {
+
+  const canvasDefaults: Partial<HTMLCanvasElement> = {
     clientWidth: 320,
     clientHeight: 240,
-    width: 0,
-    height: 0,
-    getContext: jest.fn(() => ctx),
     ...overrides,
-  } as unknown as HTMLCanvasElement;
+  };
+  for (const [key, value] of Object.entries(canvasDefaults)) {
+    Object.defineProperty(canvas, key, {
+      value,
+      configurable: true,
+      writable: true,
+    });
+  }
+  canvas.getContext = jest.fn(() => ctx) as unknown as typeof canvas.getContext;
 
   return { canvas, ctx };
 }
 
 type HookOptions = Parameters<typeof useHandLandmarker>[0];
-type HookResult = ReturnType<typeof useHandLandmarker>;
-
-function HookHarness({
-  options,
-  onResult,
-}: {
-  options: HookOptions;
-  onResult: (result: HookResult) => void;
-}) {
-  const result = useHandLandmarker(options);
-  onResult(result);
-  return null;
-}
-
-function renderHookHarness(options: HookOptions) {
-  let latest: HookResult = { isTracking: false };
-  const onResult = (result: HookResult) => {
-    latest = result;
-  };
-
-  const rendered = render(
-    <HookHarness options={options} onResult={onResult} />,
-  );
-
-  return {
-    getResult: () => latest,
-    rerender: (nextOptions: HookOptions) => {
-      rendered.rerender(
-        <HookHarness options={nextOptions} onResult={onResult} />,
-      );
-    },
-    unmount: () => {
-      rendered.unmount();
-    },
-  };
-}
 
 describe('useHandLandmarker', () => {
   beforeEach(() => {
@@ -141,11 +127,13 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: makeCanvasMock().canvas };
 
     await act(async () => {
-      renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: false,
-        overlayEnabled: false,
+      renderHook((options: HookOptions) => useHandLandmarker(options), {
+        initialProps: {
+          videoRef,
+          canvasRef,
+          trackingEnabled: false,
+          overlayEnabled: false,
+        } as HookOptions,
       });
       await flushPromises();
     });
@@ -174,18 +162,24 @@ describe('useHandLandmarker', () => {
     const videoRef = { current: makeVideoMock() };
     const canvasRef = { current: makeCanvasMock().canvas };
 
-    let harness!: ReturnType<typeof renderHookHarness>;
+    let unmount!: () => void;
     await act(async () => {
-      harness = renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: false,
-        overlayEnabled: false,
-      });
+      const rendered = renderHook(
+        (options: HookOptions) => useHandLandmarker(options),
+        {
+          initialProps: {
+            videoRef,
+            canvasRef,
+            trackingEnabled: false,
+            overlayEnabled: false,
+          } as HookOptions,
+        },
+      );
+      unmount = rendered.unmount;
       await flushPromises();
     });
 
-    act(() => harness.unmount());
+    act(() => unmount());
 
     expect(close).toHaveBeenCalled();
   });
@@ -202,11 +196,13 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: canvas };
 
     await act(async () => {
-      renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: false,
-        overlayEnabled: false,
+      renderHook((options: HookOptions) => useHandLandmarker(options), {
+        initialProps: {
+          videoRef,
+          canvasRef,
+          trackingEnabled: false,
+          overlayEnabled: false,
+        } as HookOptions,
       });
       await flushPromises();
     });
@@ -233,11 +229,13 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: canvas };
 
     await act(async () => {
-      renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: true,
-        overlayEnabled: false,
+      renderHook((options: HookOptions) => useHandLandmarker(options), {
+        initialProps: {
+          videoRef,
+          canvasRef,
+          trackingEnabled: true,
+          overlayEnabled: false,
+        } as HookOptions,
       });
       await flushPromises();
     });
@@ -273,16 +271,24 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: canvas };
     const onLandmarksSnapshot = jest.fn();
 
-    let harness!: ReturnType<typeof renderHookHarness>;
+    let result!: ReturnType<
+      typeof renderHook<ReturnType<typeof useHandLandmarker>, HookOptions>
+    >['result'];
     await act(async () => {
-      harness = renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: true,
-        overlayEnabled: true,
-        onLandmarksSnapshot,
-        snapshotIntervalMs: 0,
-      });
+      const rendered = renderHook(
+        (options: HookOptions) => useHandLandmarker(options),
+        {
+          initialProps: {
+            videoRef,
+            canvasRef,
+            trackingEnabled: true,
+            overlayEnabled: true,
+            onLandmarksSnapshot,
+            snapshotIntervalMs: 0,
+          } as HookOptions,
+        },
+      );
+      result = rendered.result;
       await flushPromises();
     });
 
@@ -297,7 +303,7 @@ describe('useHandLandmarker', () => {
     expect(drawConnectors).toHaveBeenCalled();
     expect(drawLandmarks).toHaveBeenCalled();
     expect(ctx.restore).toHaveBeenCalled();
-    expect(harness.getResult().isTracking).toBe(true);
+    expect(result.current.isTracking).toBe(true);
     expect(onLandmarksSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({
         landmarks: landmarksResult.landmarks,
@@ -329,11 +335,13 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: canvas };
 
     await act(async () => {
-      renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: true,
-        overlayEnabled: false,
+      renderHook((options: HookOptions) => useHandLandmarker(options), {
+        initialProps: {
+          videoRef,
+          canvasRef,
+          trackingEnabled: true,
+          overlayEnabled: false,
+        } as HookOptions,
       });
       await flushPromises();
     });
@@ -357,11 +365,13 @@ describe('useHandLandmarker', () => {
     const canvasRef = { current: canvas };
 
     await act(async () => {
-      renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: true,
-        overlayEnabled: false,
+      renderHook((options: HookOptions) => useHandLandmarker(options), {
+        initialProps: {
+          videoRef,
+          canvasRef,
+          trackingEnabled: true,
+          overlayEnabled: false,
+        } as HookOptions,
       });
       await flushPromises();
     });
@@ -382,24 +392,30 @@ describe('useHandLandmarker', () => {
     const videoRef = { current: makeVideoMock() };
     const canvasRef = { current: makeCanvasMock().canvas };
 
-    let harness!: ReturnType<typeof renderHookHarness>;
+    let rerender!: (options: HookOptions) => void;
     await act(async () => {
-      harness = renderHookHarness({
-        videoRef,
-        canvasRef,
-        trackingEnabled: true,
-        overlayEnabled: false,
-      });
+      const rendered = renderHook(
+        (options: HookOptions) => useHandLandmarker(options),
+        {
+          initialProps: {
+            videoRef,
+            canvasRef,
+            trackingEnabled: true,
+            overlayEnabled: false,
+          } as HookOptions,
+        },
+      );
+      rerender = rendered.rerender;
       await flushPromises();
     });
 
     act(() => {
-      harness.rerender({
+      rerender({
         videoRef,
         canvasRef,
         trackingEnabled: false,
         overlayEnabled: false,
-      });
+      } as HookOptions);
     });
 
     expect(global.cancelAnimationFrame).toHaveBeenCalled();
