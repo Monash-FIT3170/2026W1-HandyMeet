@@ -1,3 +1,6 @@
+'use client';
+
+import { useRef } from 'react';
 import referenceData from '@/constants/gestureReference.json';
 import { CaptionGesture } from '@/constants/captions';
 import { Reaction, REACTION_MAP } from '@/constants/reactions';
@@ -36,6 +39,52 @@ function GestureCard({
   result: string;
 }) {
   const example = referenceData[label];
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const diagram = (
+    <svg
+      viewBox="0 0 260 210"
+      role="img"
+      aria-label={`${title}: camera-facing hand-position diagram. ${example.instructions.join(' ')}`}
+      className="w-full rounded bg-neutral-950"
+    >
+      {example.hands.map((hand, index) => (
+        <g key={index}>
+          <polygon
+            points={[0, 5, 9, 13, 17].map((i) => hand[i].join(',')).join(' ')}
+            fill="none"
+            stroke="#d4d4d4"
+            strokeWidth="2"
+          />
+          {fingers.map((finger) => (
+            <g key={finger.name}>
+              <polyline
+                points={finger.points.map((i) => hand[i].join(',')).join(' ')}
+                fill="none"
+                stroke={finger.colour}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle
+                cx={hand[finger.points.at(-1)!][0]}
+                cy={hand[finger.points.at(-1)!][1]}
+                r="5"
+                fill={finger.colour}
+              />
+              <text
+                x={hand[finger.points.at(-1)!][0] + 7}
+                y={hand[finger.points.at(-1)!][1] + 4}
+                fill="white"
+                fontSize="12"
+              >
+                {fingers.indexOf(finger) + 1}
+              </text>
+            </g>
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
   return (
     <figure className="rounded-lg border border-neutral-700 bg-neutral-900 p-3">
       <figcaption className="font-semibold text-primary-200">
@@ -45,49 +94,41 @@ function GestureCard({
         {example.hands.length === 2 ? 'Use both hands' : 'Use one hand'} · Hold
         about one second
       </p>
-      <svg
-        viewBox="0 0 260 210"
-        role="img"
-        aria-label={`${title}: camera-facing hand-position diagram. ${example.instructions.join(' ')}`}
-        className="my-2 w-full rounded bg-neutral-950"
+      <button
+        type="button"
+        aria-label={`Enlarge ${title} gesture reference`}
+        onClick={() => dialogRef.current?.showModal()}
+        className="my-2 block w-full cursor-zoom-in rounded focus-visible:outline-2 focus-visible:outline-primary-500"
       >
-        {example.hands.map((hand, index) => (
-          <g key={index}>
-            <polygon
-              points={[0, 5, 9, 13, 17].map((i) => hand[i].join(',')).join(' ')}
-              fill="none"
-              stroke="#d4d4d4"
-              strokeWidth="2"
-            />
-            {fingers.map((finger) => (
-              <g key={finger.name}>
-                <polyline
-                  points={finger.points.map((i) => hand[i].join(',')).join(' ')}
-                  fill="none"
-                  stroke={finger.colour}
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle
-                  cx={hand[finger.points.at(-1)!][0]}
-                  cy={hand[finger.points.at(-1)!][1]}
-                  r="5"
-                  fill={finger.colour}
-                />
-                <text
-                  x={hand[finger.points.at(-1)!][0] + 7}
-                  y={hand[finger.points.at(-1)!][1] + 4}
-                  fill="white"
-                  fontSize="12"
-                >
-                  {fingers.indexOf(finger) + 1}
-                </text>
-              </g>
-            ))}
-          </g>
-        ))}
-      </svg>
+        {diagram}
+      </button>
+      <dialog
+        ref={dialogRef}
+        aria-label={`${title} gesture reference`}
+        onKeyDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) dialogRef.current?.close();
+        }}
+        className="fixed inset-0 m-auto max-h-[90dvh] w-[min(44rem,calc(100%-2rem))] max-w-none overflow-y-auto rounded-xl border border-neutral-600 bg-neutral-900 p-0 text-neutral-100 shadow-2xl backdrop:bg-black/70"
+      >
+        <div className="p-4 sm:p-6">
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold">{title}</h3>
+            <button
+              type="button"
+              autoFocus
+              onClick={() => dialogRef.current?.close()}
+              className="rounded-lg bg-neutral-800 px-4 py-2 text-sm hover:bg-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-500"
+            >
+              Close
+            </button>
+          </div>
+          {diagram}
+          <p className="mt-3 text-sm leading-relaxed">
+            {example.instructions.join(' ')}
+          </p>
+        </div>
+      </dialog>
       <p className="text-xs leading-relaxed text-neutral-200">
         {example.instructions.join(' ')}
       </p>
