@@ -285,29 +285,157 @@ Detailed instructions are in `./scripts/gesture-recognition/README.md`. This inc
 
 ## Repository Structure
 
+The Next.js frontend lives in the repository root, alongside the LiveKit agent and gesture recognition scripts.
+
+```
+HandyMeet/
+├── app/                          # Next.js pages and API routes
+│   ├── api/
+│   └── room/
+├── components/                   # React UI components
+├── hooks/                        # React hooks
+├── helpers/                      # Shared utility functions
+├── constants/                    # Shared application constants
+├── agent/                        # LiveKit transcription agent
+│   └── transcription.ts
+├── scripts/
+│   └── gesture-recognition/      # Gesture model training and export
+│       ├── training_data/
+│       ├── model.h5
+│       ├── train_model.py
+│       ├── export_tfjs.py
+│       └── README.md
+├── public/                       # Static assets
+│   └── model/                    # Exported TensorFlow.js model
+├── tests/                        # Automated tests
+├── docs/                         # Project documentation
+├── .github/
+│   └── workflows/
+│       ├── deploy-agent.yml
+│       └── ...
+├── .env.example
+├── .env.local                    # Never pushed to Git
+├── .gitignore
+├── Dockerfile
+├── Dockerfile.nextjs
+├── docker-compose.yml
+├── livekit.toml
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
 ## Deployment
+
+HandyMeet uses two main platforms for deployment.
 
 ### Web Application
 
+The Next.js application is deployed through **Vercel**.
+
+Production URL:
+
+```
+https://2026-w1-handy-meet.vercel.app/
+```
+
+Vercel project owner:
+
+```
+Michael Alexander: https://www.linkedin.com/in/michael-alexander2/
+```
+
 ### LiveKit Agent
 
+The meeting agent is deployed with the second platform, LiveKit Cloud
+
+Deployment configuration and automation can be found in this directory:
+
+```
+.github/workflows/deploy-agent.yml
+```
+
 ### Account Ownership and Handover
+
+The following external accounts must be transferred to the next development team/project owner for full access:
+
+| Service           | Current Owner                                                         | Handover Requirement                 |
+| ----------------- | --------------------------------------------------------------------- | ------------------------------------ |
+| Vercel            | Michael Alexander                                                     | Transfer project/access              |
+| LiveKit Cloud     | Michael Alexander                                                     | Add future developers/project owner  |
+| GitHub Repository | Tam Quan, Shen-Kit Hia, Michael Alexander, 2026 FIT3170 Teaching Team | Add developers for repository access |
 
 ## Commmon Issues and Troublesohoting
 
 ### Camera/Microphone does not work
 
+Possible causes:
+
+- Browser permission denied
+- Operating system permission denied
+- Another open application is using that input device
+- Wrong input device is selected
+
+Check all permissions and confirm the correct device is selected.
+
 ### LiveKit Agent does not join the meeting
+
+Check:
+
+- LIVEKIT_URL
+- LIVEKIT_API_KEY
+- LIVEKIT_API_SECRET
+- Agent process logs
+- LiveKit Cloud project status
+- Network connectivity
+
+If the frontend meeting is working as intended, but the agent is not joining (the agent does not visually join as a participant, but as a hidden member), the LiveKit agent should be the first component investigated.
 
 ### Transcription does not work
 
+Check:
+
+- Agent has joined the meeting (hidden member)
+- Microphone audio is reaching HandyMeet and LiveKit
+- DEEPGRAM_API_KEY is valid
+- DEEPGRAM quota has not been exhausted
+- Deepgram service is available and not under maintenance
+- Agent logs for any API-related errors
+
 ### Gemini Summary does not generate
+
+Check:
+
+- GEMINI_API_KEY
+- Gemini quota has not been exhausted
+- Check that a transcript has been generated to summarise
+- Gemini service is available and not under maintenance
 
 ### Groq action items are missing
 
+Check:
+
+- GROQ_API_KEY
+- Groq quota has not been exhausted
+- Groq service is available and not under maintenance
+- Server logs for short-term rate limits
+
 ### API Free tier limits
 
+HandyMeet relies on several services with usage quotas depending on which tier plan is used, currently all plans are using the base free tier.
+
+These include:
+
+- Deepgram
+- Gemini
+- Groq
+- Livekit
+
+If a previously working feature suddenly no longer works, check whether the account tied to that feature has not reached its free tier quota.
+
 ## Known Technical Debt
+
+There is currently no known technical debt. Previous technical debt of deprecated packages such as react-test-renderer has been since rectified.
 
 ## Notes for Future Developers
 
