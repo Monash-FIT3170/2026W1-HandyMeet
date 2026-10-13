@@ -1,7 +1,6 @@
 /** @jest-environment jsdom */
 
-import React from 'react';
-import { act, render } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { RoomEvent } from 'livekit-client';
 import type { Room, Participant } from 'livekit-client';
 import { useIncomingReaction } from '../useIncomingReaction';
@@ -36,41 +35,6 @@ function encodePayload(obj: unknown): Uint8Array {
   return new TextEncoder().encode(JSON.stringify(obj));
 }
 
-// --- Test harness component: exposes hook result via callback ---
-function HookHarness({
-  room,
-  onResult,
-}: {
-  room: Room | undefined;
-  onResult: (result: ReturnType<typeof useIncomingReaction>) => void;
-}) {
-  const result = useIncomingReaction(room);
-  onResult(result);
-  return null;
-}
-
-function renderHookHarness(room: Room | undefined) {
-  let latest: ReturnType<typeof useIncomingReaction> = {
-    reaction: '',
-    participant: undefined,
-  };
-  const onResult = (result: ReturnType<typeof useIncomingReaction>) => {
-    latest = result;
-  };
-
-  const rendered = render(<HookHarness room={room} onResult={onResult} />);
-
-  return {
-    getResult: () => latest,
-    rerender: (nextRoom: Room | undefined) => {
-      rendered.rerender(<HookHarness room={nextRoom} onResult={onResult} />);
-    },
-    unmount: () => {
-      rendered.unmount();
-    },
-  };
-}
-
 describe('useIncomingReaction', () => {
   let consoleErrorSpy: jest.SpyInstance;
 
@@ -83,14 +47,14 @@ describe('useIncomingReaction', () => {
   });
 
   it('returns empty reaction and no participant when room is undefined', () => {
-    const { getResult } = renderHookHarness(undefined);
-    expect(getResult().reaction).toBe('');
-    expect(getResult().participant).toBeUndefined();
+    const { result } = renderHook(() => useIncomingReaction(undefined));
+    expect(result.current.reaction).toBe('');
+    expect(result.current.participant).toBeUndefined();
   });
 
   it('attaches a DataReceived listener when room is provided', () => {
     const room = createMockRoom();
-    renderHookHarness(room);
+    renderHook(() => useIncomingReaction(room));
 
     expect(room.on).toHaveBeenCalledWith(
       RoomEvent.DataReceived,
@@ -100,7 +64,7 @@ describe('useIncomingReaction', () => {
 
   it('removes the listener on unmount', () => {
     const room = createMockRoom();
-    const { unmount } = renderHookHarness(room);
+    const { unmount } = renderHook(() => useIncomingReaction(room));
 
     const registeredHandler = (room.on as jest.Mock).mock.calls[0][1];
     unmount();
@@ -113,7 +77,7 @@ describe('useIncomingReaction', () => {
 
   it('updates reaction and participant when a matching-topic message arrives', () => {
     const room = createMockRoom();
-    const { getResult } = renderHookHarness(room);
+    const { result } = renderHook(() => useIncomingReaction(room));
 
     const fakeSender = { identity: 'user-123' } as unknown as Participant;
     const payload = encodePayload({ reaction: 'thumbsup' });
@@ -128,13 +92,13 @@ describe('useIncomingReaction', () => {
       );
     });
 
-    expect(getResult().reaction).toBe('thumbsup');
-    expect(getResult().participant).toBe(fakeSender);
+    expect(result.current.reaction).toBe('thumbsup');
+    expect(result.current.participant).toBe(fakeSender);
   });
 
   it('ignores messages with a non-matching topic', () => {
     const room = createMockRoom();
-    const { getResult } = renderHookHarness(room);
+    const { result } = renderHook(() => useIncomingReaction(room));
 
     const payload = encodePayload({ reaction: 'thumbsup' });
 
@@ -148,13 +112,13 @@ describe('useIncomingReaction', () => {
       );
     });
 
-    expect(getResult().reaction).toBe('');
-    expect(getResult().participant).toBeUndefined();
+    expect(result.current.reaction).toBe('');
+    expect(result.current.participant).toBeUndefined();
   });
 
   it('logs an error and does not crash on malformed payload', () => {
     const room = createMockRoom();
-    const { getResult } = renderHookHarness(room);
+    const { result } = renderHook(() => useIncomingReaction(room));
 
     const badPayload = new TextEncoder().encode('not valid json');
 
@@ -172,17 +136,20 @@ describe('useIncomingReaction', () => {
       'Failed to parse incoming reaction data:',
       expect.any(Error),
     );
-    expect(getResult().reaction).toBe('');
+    expect(result.current.reaction).toBe('');
   });
 
   it('detaches from the old room and attaches to the new one when room changes', () => {
     const roomA = createMockRoom();
     const roomB = createMockRoom();
 
-    const { rerender } = renderHookHarness(roomA);
+    const { rerender } = renderHook(
+      ({ room }: { room: Room | undefined }) => useIncomingReaction(room),
+      { initialProps: { room: roomA } },
+    );
     const handlerOnA = (roomA.on as jest.Mock).mock.calls[0][1];
 
-    rerender(roomB);
+    rerender({ room: roomB });
 
     expect(roomA.off).toHaveBeenCalledWith(RoomEvent.DataReceived, handlerOnA);
     expect(roomB.on).toHaveBeenCalledWith(
