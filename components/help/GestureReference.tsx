@@ -125,14 +125,8 @@ function GestureCard({
             </button>
           </div>
           {diagram}
-          <p className="mt-3 text-sm leading-relaxed">
-            {example.instructions.join(' ')}
-          </p>
         </div>
       </dialog>
-      <p className="text-xs leading-relaxed text-neutral-200">
-        {example.instructions.join(' ')}
-      </p>
       <p className="mt-2 text-sm text-neutral-100">{result}</p>
     </figure>
   );
