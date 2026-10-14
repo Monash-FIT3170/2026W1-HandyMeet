@@ -113,7 +113,6 @@ export default function FeatureGuide({
               {feature.tasks.map((task) => (
                 <details
                   key={task.title}
-                  open={variant === 'full' ? true : undefined}
                   className="rounded-lg border border-neutral-700 p-4"
                 >
                   <summary className="cursor-pointer rounded font-semibold text-primary-200 focus-visible:outline-2 focus-visible:outline-primary-500">
