@@ -1,5 +1,6 @@
 'use client';
 
+import { registerShapeOwnership } from '@/helpers/whiteboard/shapeOwnership';
 import 'tldraw/tldraw.css';
 import '@tldraw/commenting/commenting.css';
 import {
@@ -37,6 +38,7 @@ import {
   type TLStoreEventInfo,
   type TLUiOverrides,
 } from 'tldraw';
+import ShapeAuthorHover from '@/components/whiteboard/ShapeAuthorHover';
 import {
   CanvasComments,
   CommentAuthor,
@@ -52,13 +54,16 @@ import {
   type ImportModeRequest,
 } from '@/helpers/whiteboard/svgTransfer';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
+import { registerShapeDeletionGuard } from '@/helpers/whiteboard/shapeOwnership';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
 import GestureDrawingOverlay from '@/components/GestureDrawingOverlay';
 import {
   useGestureDrawing,
   type DrawingStroke,
 } from '@/hooks/useGestureDrawing';
+import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
+import type { HelpContext } from '@/constants/featureHelp';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
 const CURSOR_TOPIC = 'handy-meet-whiteboard-cursors-v1';
@@ -92,6 +97,7 @@ type CursorMessage = {
 interface WhiteboardProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenHelp: (context: HelpContext) => void;
   captionSettings: CaptionSettings;
   onCaptionSettingsChange: (s: CaptionSettings) => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
@@ -129,6 +135,7 @@ const IMPORT_LABEL_KEY = 'handymeet.import-svg';
 export default function Whiteboard({
   isOpen,
   onClose,
+  onOpenHelp,
   captionSettings,
   onCaptionSettingsChange,
   localVideoRef,
@@ -375,10 +382,19 @@ export default function Whiteboard({
     );
   }, []);
 
-  const handleEditorMount = useCallback((editor: Editor) => {
-    editorRef.current = editor;
-    setEditor(editor);
-  }, []);
+  const handleEditorMount = useCallback(
+    (editor: Editor) => {
+      editorRef.current = editor;
+      setEditor(editor);
+      const participant = room.localParticipant;
+      return registerShapeOwnership(
+        editor,
+        participant.identity,
+        participant.name || participant.identity,
+      );
+    },
+    [room],
+  );
 
   useEffect(() => {
     if (!isOpen || !editor) return;
@@ -492,6 +508,16 @@ export default function Whiteboard({
     };
   }, [editor, isOpen, room, store]);
 
+  useEffect(() => {
+    if (!editor) return;
+    const participant = room.localParticipant;
+    return registerShapeDeletionGuard(
+      editor,
+      participant.identity,
+      participant.name || participant.identity,
+    );
+  }, [editor, room]);
+
   // `CommentTool.configure()` returns a fresh class on every call, and tldraw
   // recreates the entire Editor whenever the contents of `tools` change
   // identity — disposing it mid-stroke and resetting the selected tool. Build
@@ -569,6 +595,7 @@ export default function Whiteboard({
 
   const components = useMemo<TLComponents>(
     () => ({
+      OnTheCanvas: ShapeAuthorHover,
       InFrontOfTheCanvas: () => (
         <CanvasComments
           currentUserId={currentUserId}
@@ -708,6 +735,7 @@ export default function Whiteboard({
         <div className="flex items-center gap-3">
           <button
             onClick={handleToggleGestureDrawing}
+            aria-pressed={gestureDrawingEnabled}
             className={`text-xs px-3 py-1 rounded-md transition-colors cursor-pointer flex items-center gap-2 ${
               gestureDrawingEnabled
                 ? isCameraEnabled
@@ -736,16 +764,20 @@ export default function Whiteboard({
 
           {gestureDrawingEnabled && isCameraEnabled && (
             <div className="flex items-center gap-2 text-xs text-neutral-400">
-              {isDrawing && (
+              {currentGesture === DrawingGesture.Pointing && (
                 <span className="flex items-center gap-1 text-blue-400">
                   <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
                   Drawing...
                 </span>
               )}
-              {!isDrawing && cursorPosition && (
-                <span className="text-neutral-500">
-                  Make a fist with your other hand to draw
+              {currentGesture === DrawingGesture.Fist && (
+                <span className="flex items-center gap-1 text-green-400">
+                  <span className="w-2 h-2 bg-green-400 rounded-full" />
+                  Stroke finished
                 </span>
+              )}
+              {!currentGesture && cursorPosition && (
+                <span className="text-neutral-500">Point finger to draw</span>
               )}
             </div>
           )}
@@ -760,12 +792,22 @@ export default function Whiteboard({
           </span>
         </div>
 
-        <button
-          onClick={onClose}
-          className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
-        >
-          Close
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => onOpenHelp('whiteboard')}
+            className="rounded-md bg-neutral-800 px-3 py-1 text-xs text-neutral-100 hover:bg-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-500"
+          >
+            Help
+          </button>
+          <button
+            onClick={onClose}
+            className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
       </div>
 
       <input
@@ -834,12 +876,12 @@ export default function Whiteboard({
               <p className="font-semibold mb-2 text-white">Gesture Controls</p>
               <div className="space-y-1">
                 <p className="flex items-center gap-2">
-                  <span className="text-blue-400">One hand</span>
-                  <span className="text-neutral-500">= Move cursor</span>
+                  <span className="text-blue-400">Point finger</span>
+                  <span className="text-neutral-500">= Draw</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <span className="text-green-400">Other hand: fist</span>
-                  <span className="text-neutral-500">= Draw</span>
+                  <span className="text-green-400">Make fist</span>
+                  <span className="text-neutral-500">= Finish stroke</span>
                 </p>
               </div>
               <p className="mt-2 text-neutral-500 text-[10px]">

@@ -6,7 +6,6 @@ import {
   ServerOptions,
 } from '@livekit/agents';
 import * as deepgram from '@livekit/agents-plugin-deepgram';
-import { Participant } from 'livekit-client';
 import { fileURLToPath } from 'node:url';
 
 function createTranscriptionSession() {

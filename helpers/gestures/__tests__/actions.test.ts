@@ -176,7 +176,7 @@ describe('Action Handlers', () => {
       },
     ];
 
-    reactionTests.forEach(({ handler, reaction, name }) => {
+    reactionTests.forEach(({ handler, name }) => {
       describe(name, () => {
         it('should publish reaction data to room', async () => {
           // Given

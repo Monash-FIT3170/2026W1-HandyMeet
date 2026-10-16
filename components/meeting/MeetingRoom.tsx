@@ -27,7 +27,7 @@ import type {
   WidgetState,
 } from '@livekit/components-react';
 import { RoomEvent, Track } from 'livekit-client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import LocalCameraTile, { isLocalCameraTrack } from './LocalCameraTile';
 import TranscriptionSettings from '@/components/TranscriptionSettings';
 import type { CaptionSettings } from '@/components/TranscriptionSettings';
@@ -43,6 +43,11 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
+import type { HelpContext } from '@/constants/featureHelp';
+import {
+  useGestureCaptions,
+  type TimestampedTranscriptEntry,
+} from '@/hooks/useGestureCaptions';
 
 const initialWidgetState: WidgetState = {
   showChat: false,
@@ -101,6 +106,7 @@ type MeetingRoomProps = {
   whiteboardOpen: boolean;
   onToggleWhiteboard: () => void;
   onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
+  onOpenHelp: (context: HelpContext) => void;
 };
 
 export default function MeetingRoom({
@@ -110,6 +116,7 @@ export default function MeetingRoom({
   whiteboardOpen,
   onToggleWhiteboard,
   onLocalVideoRef,
+  onOpenHelp,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
@@ -126,6 +133,8 @@ export default function MeetingRoom({
   const transcriptions = useTranscriptions();
   const { isCameraEnabled } = useLocalParticipant();
   const room = useRoomContext();
+  const { gestureTranscriptEntries, flushActive } = useGestureCaptions(room);
+  const speechTimestampsRef = useRef<Map<string, number>>(new Map());
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPredictingGestureRef = useRef(false);
@@ -234,8 +243,37 @@ export default function MeetingRoom({
     }
   }, [layoutContext.pin, screenShareTracks]);
 
-  const transcriptLines = transcriptions.map(
-    (t) => `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
+  const buildTranscriptLines = useCallback(
+    (extraGesture?: TimestampedTranscriptEntry | null) => {
+      const timestamps = speechTimestampsRef.current;
+      const now = Date.now();
+
+      const speechEntries = transcriptions.map((t) => {
+        const key = `${t.streamInfo.id}:${t.participantInfo?.identity ?? ''}`;
+        if (!timestamps.has(key)) {
+          timestamps.set(key, now);
+        }
+        return {
+          text: `${t.participantInfo?.identity ?? 'Unknown'}: ${t.text}`,
+          timestamp: timestamps.get(key)!,
+        };
+      });
+
+      const allEntries = [
+        ...speechEntries,
+        ...gestureTranscriptEntries,
+        ...(extraGesture ? [extraGesture] : []),
+      ];
+      allEntries.sort((a, b) => a.timestamp - b.timestamp);
+
+      return allEntries.map((e) => e.text);
+    },
+    [transcriptions, gestureTranscriptEntries],
+  );
+
+  const transcriptLines = useMemo(
+    () => buildTranscriptLines(),
+    [buildTranscriptLines],
   );
 
   // Checks for completed transcript lines every second and only calls Groq
@@ -268,9 +306,10 @@ export default function MeetingRoom({
   }, [actionItemSidebarOpen, liveActionItems.actionItems]);
   void liveActionItems;
   const confirmLeave = useCallback(() => {
+    const flushed = flushActive();
     setShowLeaveConfirm(false);
-    onLeave(transcriptLines);
-  }, [onLeave, transcriptLines]);
+    onLeave(buildTranscriptLines(flushed));
+  }, [buildTranscriptLines, flushActive, onLeave]);
 
   const cancelLeave = useCallback(() => {
     setShowLeaveConfirm(false);
@@ -408,9 +447,10 @@ export default function MeetingRoom({
                     />
                   </div>
                 )}
+
                 <button
                   className="lk-button"
-                  aria-pressed={captionsOpen}
+                  aria-expanded={captionsOpen}
                   onClick={() => setCaptionsOpen((v) => !v)}
                   title="Captions"
                 >
@@ -436,6 +476,7 @@ export default function MeetingRoom({
               </div>
 
               {/* Whiteboard */}
+
               <button
                 className="lk-button"
                 aria-pressed={whiteboardOpen}
@@ -471,6 +512,7 @@ export default function MeetingRoom({
               />
 
               {/* Live insights */}
+
               <button
                 className="lk-button"
                 aria-pressed={insightsEnabled}
@@ -497,6 +539,16 @@ export default function MeetingRoom({
                   <circle cx="12" cy="12" r="4" />
                 </svg>
                 Insights
+              </button>
+
+              <button
+                type="button"
+                className="lk-button"
+                aria-haspopup="dialog"
+                onClick={() => onOpenHelp('meeting')}
+              >
+                <span aria-hidden="true">?</span>
+                Help
               </button>
             </div>
 
