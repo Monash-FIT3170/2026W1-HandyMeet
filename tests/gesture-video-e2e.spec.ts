@@ -159,20 +159,21 @@ test.describe('video-driven gesture E2E', () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ permissions: ['camera', 'microphone'] });
 
-  /*
   test('given cameraOff video when hand tracking runs then turns off the local camera', async ({
     page,
   }: {
     page: Page;
   }) => {
     await joinRoomWithGestureVideo(page, 'cameraOff');
+    const cameraButton = page.getByRole('button', { name: /camera/i });
+    await expect(cameraButton).toHaveAttribute('aria-pressed', 'true');
     await enableHandTracking(page);
 
     await expect
       .poll(() => readGestureActions(page), { timeout: GESTURE_TIMEOUT_MS })
       .toContain('cameraOff');
+    await expect(cameraButton).toHaveAttribute('aria-pressed', 'false');
   });
-  */
 
   test('given mute video when hand tracking runs then turns off the local microphone', async ({
     page,
