@@ -13,23 +13,19 @@ import { DrawingGesture } from '@/constants/gestures';
 export type DrawingPoint = { x: number; y: number };
 export type DrawingStroke = DrawingPoint[];
 
-const SMOOTHING_WINDOW = 5;
-const STABILITY_FRAMES_REQUIRED = 4;
+// 2 hands = noisier tracking than 1, so smooth more and allow less jump
+const SMOOTHING_WINDOW = 6;
 const JUMP_THRESHOLD = 0.15;
+// need a few fist frames in a row before drawing, so 1 bad frame can't start a line
+const STABILITY_FRAMES_REQUIRED = 3;
 
-type HandState = {
-  positionHistory: DrawingPoint[];
-  gestureStability: number;
-  lastPosition: DrawingPoint | null;
-};
-
-function createEmptyHandState(): HandState {
-  return {
-    positionHistory: [],
-    gestureStability: 0,
-    lastPosition: null,
-  };
-}
+// cursor hand always tracks its fingertip no matter its pose - moving it
+// never toggles drawing. the other hand is "control": fist = draw, anything
+// else = stop. keeps one hand switching pose from shifting the cursor.
+//
+// control isn't hardcoded to left/right, it's whichever hand is fisted, so
+// it works for both. we keep it sticky by label so missing a fist for 1
+// frame doesn't swap hands mid-stroke.
 
 type UseGestureDrawingOptions = {
   videoRef: React.RefObject<HTMLVideoElement | null>;
@@ -61,8 +57,10 @@ export function useGestureDrawing({
   const onStrokeUpdateRef = useRef(onStrokeUpdate);
   const enabledRef = useRef(enabled);
 
-  const handStatesRef = useRef<Map<string, HandState>>(new Map());
-  const activeHandLabelRef = useRef<string | null>(null);
+  const positionHistoryRef = useRef<DrawingPoint[]>([]);
+  const lastPositionRef = useRef<DrawingPoint | null>(null);
+  const controlHandLabelRef = useRef<string | null>(null);
+  const cursorHandLabelRef = useRef<string | null>(null);
 
   useEffect(() => {
     onStrokeCompleteRef.current = onStrokeComplete;
@@ -113,12 +111,22 @@ export function useGestureDrawing({
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
       }
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Cleanup is legitimate here
       resetState();
       return;
     }
 
     let wasDrawing = false;
+    let controlStability = 0;
+
+    function stopDrawing() {
+      if (wasDrawing && currentStrokeRef.current.length > 0) {
+        onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
+        currentStrokeRef.current = [];
+      }
+      wasDrawing = false;
+      setIsDrawing(false);
+      lastPositionRef.current = null;
+    }
 
     function detect() {
       if (!enabledRef.current) {
@@ -142,144 +150,119 @@ export function useGestureDrawing({
 
       const results = landmarker.detectForVideo(video, performance.now());
 
-      if (results.landmarks.length === 0) {
+      const hands = results.landmarks.map(
+        (landmarks: NormalizedLandmark[], index: number) => ({
+          label:
+            results.handedness[index]?.[0]?.categoryName ?? `hand-${index}`,
+          landmarks,
+          gesture: detectDrawingGesture(landmarks, wasDrawing),
+        }),
+      );
+
+      // need 2 hands to have a control hand - with only 1, just use it as
+      // the cursor. only update controlHandLabelRef in here, so briefly
+      // losing track of a hand (e.g. an open palm reads as 1 hand for a
+      // moment) can't wipe the sticky memory and cause a swap
+      let controlHand = null;
+      if (hands.length > 1) {
+        controlHand =
+          // both fists at once? stay on whoever was already in control
+          hands.find(
+            (h) =>
+              h.label === controlHandLabelRef.current &&
+              h.gesture === DrawingGesture.Fist,
+          ) ??
+          hands.find((h) => h.gesture === DrawingGesture.Fist) ??
+          hands.find((h) => h.label === controlHandLabelRef.current) ??
+          hands[1];
+        controlHandLabelRef.current = controlHand.label;
+      }
+
+      const cursorHand = controlHand
+        ? hands.find((h) => h !== controlHand)!
+        : hands[0];
+
+      const fingerTip = cursorHand
+        ? getIndexFingerTip(cursorHand.landmarks)
+        : null;
+
+      if (!fingerTip) {
         setCursorPosition(null);
         setCurrentGesture(null);
-        activeHandLabelRef.current = null;
-        handStatesRef.current.clear();
+        positionHistoryRef.current = [];
+        controlHandLabelRef.current = null;
+        cursorHandLabelRef.current = null;
+        stopDrawing();
+        animationFrameRef.current = requestAnimationFrame(detect);
+        return;
+      }
 
+      // cursor hand changed (drawing hand swapped with control) - clear the
+      // smoothing history so it doesn't blend old + new hand positions into
+      // a phantom line, and start a fresh stroke at the new hand
+      if (
+        cursorHandLabelRef.current !== null &&
+        cursorHandLabelRef.current !== cursorHand.label
+      ) {
+        positionHistoryRef.current = [];
+        lastPositionRef.current = null;
         if (wasDrawing && currentStrokeRef.current.length > 0) {
           onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
           currentStrokeRef.current = [];
         }
-        wasDrawing = false;
-        setIsDrawing(false);
+      }
+      cursorHandLabelRef.current = cursorHand.label;
 
-        animationFrameRef.current = requestAnimationFrame(detect);
-        return;
+      const mirroredX = 1 - fingerTip.x;
+      const rawPosition = { x: mirroredX, y: fingerTip.y };
+
+      positionHistoryRef.current.push(rawPosition);
+      if (positionHistoryRef.current.length > SMOOTHING_WINDOW) {
+        positionHistoryRef.current.shift();
       }
 
-      const handsWithGestures = results.landmarks.map(
-        (landmarks: NormalizedLandmark[], index: number) => {
-          const handednessLabel =
-            results.handedness[index]?.[0]?.categoryName ?? `hand-${index}`;
-          return {
-            label: handednessLabel,
-            landmarks,
-            gesture: detectDrawingGesture(landmarks, wasDrawing),
-            fingerTip: getIndexFingerTip(landmarks),
-          };
-        },
-      );
+      const smoothedPosition = {
+        x:
+          positionHistoryRef.current.reduce((sum, p) => sum + p.x, 0) /
+          positionHistoryRef.current.length,
+        y:
+          positionHistoryRef.current.reduce((sum, p) => sum + p.y, 0) /
+          positionHistoryRef.current.length,
+      };
 
-      const pointingHands = handsWithGestures.filter(
-        (h) => h.gesture === DrawingGesture.Pointing,
-      );
+      setCursorPosition(smoothedPosition);
 
-      let selectedHand = null;
+      const controlGesture = controlHand?.gesture ?? null;
+      setCurrentGesture(controlGesture);
 
-      if (pointingHands.length > 0) {
-        const currentActive = activeHandLabelRef.current;
-        const stillPointing = pointingHands.find(
-          (h) => h.label === currentActive,
-        );
-        selectedHand = stillPointing ?? pointingHands[0];
-      } else {
-        const fistHand = handsWithGestures.find(
-          (h) => h.gesture === DrawingGesture.Fist,
-        );
-        if (fistHand) {
-          selectedHand = fistHand;
-        }
-      }
+      if (controlGesture === DrawingGesture.Fist) {
+        controlStability++;
 
-      if (!selectedHand) {
-        const anyHand = handsWithGestures[0];
-        if (anyHand?.fingerTip) {
-          const mirroredX = 1 - anyHand.fingerTip.x;
-          setCursorPosition({ x: mirroredX, y: anyHand.fingerTip.y });
-        } else {
-          setCursorPosition(null);
-        }
-        setCurrentGesture(null);
-        animationFrameRef.current = requestAnimationFrame(detect);
-        return;
-      }
+        if (controlStability >= STABILITY_FRAMES_REQUIRED) {
+          const lastPos = lastPositionRef.current;
+          const jumped =
+            lastPos &&
+            Math.hypot(
+              smoothedPosition.x - lastPos.x,
+              smoothedPosition.y - lastPos.y,
+            ) > JUMP_THRESHOLD;
 
-      activeHandLabelRef.current = selectedHand.label;
-      setCurrentGesture(selectedHand.gesture);
-
-      const fingerTip = selectedHand.fingerTip;
-
-      if (fingerTip) {
-        if (!handStatesRef.current.has(selectedHand.label)) {
-          handStatesRef.current.set(selectedHand.label, createEmptyHandState());
-        }
-        const handState = handStatesRef.current.get(selectedHand.label)!;
-
-        const mirroredX = 1 - fingerTip.x;
-        const rawPosition = { x: mirroredX, y: fingerTip.y };
-
-        handState.positionHistory.push(rawPosition);
-        if (handState.positionHistory.length > SMOOTHING_WINDOW) {
-          handState.positionHistory.shift();
-        }
-
-        const smoothedPosition = {
-          x:
-            handState.positionHistory.reduce((sum, p) => sum + p.x, 0) /
-            handState.positionHistory.length,
-          y:
-            handState.positionHistory.reduce((sum, p) => sum + p.y, 0) /
-            handState.positionHistory.length,
-        };
-
-        setCursorPosition(smoothedPosition);
-
-        if (selectedHand.gesture === DrawingGesture.Pointing) {
-          handState.gestureStability++;
-
-          const isStable =
-            handState.gestureStability >= STABILITY_FRAMES_REQUIRED;
-
-          if (isStable) {
-            const lastPos = handState.lastPosition;
-            const jumped =
-              lastPos &&
-              Math.hypot(
-                smoothedPosition.x - lastPos.x,
-                smoothedPosition.y - lastPos.y,
-              ) > JUMP_THRESHOLD;
-
-            if (!wasDrawing) {
-              wasDrawing = true;
-              setIsDrawing(true);
-              currentStrokeRef.current = [];
-            }
-
-            if (!jumped) {
-              currentStrokeRef.current.push(smoothedPosition);
-              onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
-            }
-
-            handState.lastPosition = smoothedPosition;
-          }
-        } else if (selectedHand.gesture === DrawingGesture.Fist) {
-          handState.gestureStability = 0;
-          handState.lastPosition = null;
-
-          if (wasDrawing && currentStrokeRef.current.length > 0) {
-            onStrokeCompleteRef.current?.([...currentStrokeRef.current]);
+          if (!wasDrawing) {
+            wasDrawing = true;
+            setIsDrawing(true);
             currentStrokeRef.current = [];
           }
-          wasDrawing = false;
-          setIsDrawing(false);
-        } else {
-          handState.gestureStability = 0;
+
+          if (!jumped) {
+            currentStrokeRef.current.push(smoothedPosition);
+            onStrokeUpdateRef.current?.([...currentStrokeRef.current]);
+          }
+
+          lastPositionRef.current = smoothedPosition;
         }
       } else {
-        setCursorPosition(null);
-        handStatesRef.current.delete(selectedHand.label);
+        controlStability = 0;
+        stopDrawing();
       }
 
       animationFrameRef.current = requestAnimationFrame(detect);
