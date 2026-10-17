@@ -12,7 +12,10 @@ const config = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
+  collectCoverage: true,
   collectCoverageFrom: ['helpers/**/*.ts', '!**/*.d.ts', '!**/node_modules/**'],
+  coverageDirectory: '<rootDir>/coverage',
+  coverageReporters: ['text', 'lcov', 'html'],
   coveragePathIgnorePatterns: ['/node_modules/'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
