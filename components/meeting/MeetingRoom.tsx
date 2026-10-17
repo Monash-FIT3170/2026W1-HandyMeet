@@ -40,6 +40,7 @@ import {
 } from '@/helpers/actionItems';
 import { predictGestureAction } from '@/helpers/gestures/gestureDetector';
 import { useHandLandmarker } from '@/hooks/useHandLandmarker';
+import { useHandTrackingCamera } from '@/hooks/useHandTrackingCamera';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import HandTrackingButton from '../button/HandTrackingButton';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
@@ -135,7 +136,7 @@ export default function MeetingRoom({
   const room = useRoomContext();
   const { gestureTranscriptEntries, flushActive } = useGestureCaptions(room);
   const speechTimestampsRef = useRef<Map<string, number>>(new Map());
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const handTrackingVideoRef = useRef<HTMLVideoElement | null>(null);
   const localCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const isPredictingGestureRef = useRef(false);
   const layoutContext = useCreateLayoutContext();
@@ -165,7 +166,6 @@ export default function MeetingRoom({
 
   const setLocalVideoRef = useCallback(
     (video: HTMLVideoElement | null) => {
-      localVideoRef.current = video;
       onLocalVideoRef?.(video);
     },
     [onLocalVideoRef],
@@ -178,11 +178,18 @@ export default function MeetingRoom({
     setShowLeaveConfirm(true);
   }, []);
 
+  const { cameraError } = useHandTrackingCamera({
+    room,
+    videoRef: handTrackingVideoRef,
+    enabled: trackingEnabled,
+  });
+  const showHandOverlay = overlayEnabled && isCameraEnabled;
+
   const { isTracking } = useHandLandmarker({
-    videoRef: localVideoRef,
+    videoRef: handTrackingVideoRef,
     canvasRef: localCanvasRef,
     trackingEnabled,
-    overlayEnabled,
+    overlayEnabled: showHandOverlay,
     onLandmarksSnapshot: async (snapshot) => {
       if (isPredictingGestureRef.current) return;
       isPredictingGestureRef.current = true;
@@ -193,15 +200,6 @@ export default function MeetingRoom({
       }
     },
   });
-
-  useEffect(() => {
-    if (!isCameraEnabled) {
-      setTimeout(() => {
-        setTrackingEnabled(false);
-        setOverlayEnabled(false);
-      }, 0);
-    }
-  }, [isCameraEnabled]);
 
   function handleToggleTracking() {
     setTrackingEnabled((prev) => {
@@ -319,6 +317,15 @@ export default function MeetingRoom({
 
   return (
     <div className="lk-video-conference">
+      <video
+        ref={handTrackingVideoRef}
+        autoPlay
+        muted
+        playsInline
+        aria-hidden="true"
+        data-hand-tracking-camera
+        className="hidden"
+      />
       <LayoutContextProvider
         value={layoutContext}
         onWidgetChange={setWidgetState}
@@ -331,7 +338,7 @@ export default function MeetingRoom({
                 <CarouselLayout tracks={carouselTracks}>
                   <MeetingTile
                     trackingEnabled={trackingEnabled}
-                    overlayEnabled={overlayEnabled}
+                    overlayEnabled={showHandOverlay}
                     videoRef={setLocalVideoRef}
                     canvasRef={setLocalCanvasRef}
                   />
@@ -340,7 +347,7 @@ export default function MeetingRoom({
                   <LocalCameraTile
                     trackRef={focusedTrack}
                     trackingEnabled={trackingEnabled}
-                    overlayEnabled={overlayEnabled}
+                    overlayEnabled={showHandOverlay}
                     videoRef={setLocalVideoRef}
                     canvasRef={setLocalCanvasRef}
                   />
@@ -354,7 +361,7 @@ export default function MeetingRoom({
               <GridLayout tracks={tracks}>
                 <MeetingTile
                   trackingEnabled={trackingEnabled}
-                  overlayEnabled={overlayEnabled}
+                  overlayEnabled={showHandOverlay}
                   videoRef={setLocalVideoRef}
                   canvasRef={setLocalCanvasRef}
                 />
@@ -507,6 +514,7 @@ export default function MeetingRoom({
                 overlayEnabled={overlayEnabled}
                 isTracking={isTracking}
                 isCameraEnabled={isCameraEnabled}
+                cameraError={cameraError}
                 onToggleTracking={handleToggleTracking}
                 onToggleOverlay={handleToggleOverlay}
               />
