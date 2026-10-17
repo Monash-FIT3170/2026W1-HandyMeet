@@ -5,6 +5,7 @@ type HandTrackingButtonProps = {
   overlayEnabled: boolean;
   isTracking: boolean;
   isCameraEnabled: boolean;
+  cameraError: string | null;
   onToggleTracking: () => void;
   onToggleOverlay: () => void;
 };
@@ -14,6 +15,7 @@ export default function HandTrackingButton({
   overlayEnabled,
   isTracking,
   isCameraEnabled,
+  cameraError,
   onToggleTracking,
   onToggleOverlay,
 }: HandTrackingButtonProps) {
@@ -63,7 +65,7 @@ export default function HandTrackingButton({
             display: 'flex',
             flexDirection: 'column',
             gap: '0.25rem',
-            width: '11rem',
+            width: '14rem',
             boxShadow: '0 8px 32px rgb(0 0 0 / 0.5)',
             backdropFilter: 'blur(12px)',
           }}
@@ -72,7 +74,6 @@ export default function HandTrackingButton({
           <button
             onClick={onToggleTracking}
             aria-pressed={trackingEnabled}
-            disabled={!isCameraEnabled}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -86,8 +87,7 @@ export default function HandTrackingButton({
               color: trackingEnabled
                 ? 'var(--color-primary-500)'
                 : 'var(--color-neutral-400)',
-              cursor: isCameraEnabled ? 'pointer' : 'not-allowed',
-              opacity: isCameraEnabled ? 1 : 0.4,
+              cursor: 'pointer',
               fontSize: '0.8rem',
               fontWeight: 500,
               transition: 'background 0.15s, color 0.15s',
@@ -124,6 +124,18 @@ export default function HandTrackingButton({
               />
             </span>
           </button>
+
+          <p
+            style={{
+              padding: '0.25rem 0.75rem',
+              fontSize: '0.75rem',
+              color: 'var(--color-neutral-400)',
+            }}
+          >
+            {trackingEnabled && !isCameraEnabled
+              ? 'Video is off. Your camera is used locally for hand tracking only.'
+              : 'Hand tracking works with video on or off. Turn video off using the camera button.'}
+          </p>
 
           {/* Overlay toggle */}
           <button
@@ -183,7 +195,19 @@ export default function HandTrackingButton({
           </button>
 
           {/* Status indicator */}
-          {trackingEnabled && (
+          {trackingEnabled && cameraError && (
+            <p
+              role="alert"
+              style={{
+                padding: '0.4rem 0.75rem',
+                fontSize: '0.75rem',
+                color: 'var(--color-secondary-300)',
+              }}
+            >
+              {cameraError}
+            </p>
+          )}
+          {trackingEnabled && !cameraError && (
             <>
               <div
                 style={{
