@@ -100,6 +100,8 @@ export function useHandLandmarker({
       return;
     }
 
+    lastVideoTimeRef.current = -1;
+
     // Detection loop
     function detect() {
       const video = videoRef.current;
@@ -109,36 +111,12 @@ export function useHandLandmarker({
       // Skips if anything isn't ready yet
       if (
         !video ||
-        !canvas ||
         !landmarker ||
         video.readyState < 2 ||
         video.currentTime === lastVideoTimeRef.current // same frame, skip
       ) {
         animationFrameRef.current = requestAnimationFrame(detect);
         return;
-      }
-
-      // Match canvas dimensions to the client video so landmarks are positioned correctly
-      canvas.width = canvas.clientWidth;
-      canvas.height = canvas.clientHeight;
-
-      const videoRatio = video.videoWidth / video.videoHeight;
-      const canvasRatio = canvas.width / canvas.height;
-
-      let scaleX = 1;
-      let scaleY = 1;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      // scaling calculations for videos that don't match the aspect ratio of the container
-      if (videoRatio > canvasRatio) {
-        const renderWidth = canvas.height * videoRatio;
-        scaleX = renderWidth / canvas.width;
-        offsetX = (renderWidth - canvas.width) / 2 / canvas.width;
-      } else if (videoRatio < canvasRatio) {
-        const renderHeight = canvas.width / videoRatio;
-        scaleY = renderHeight / canvas.height;
-        offsetY = (renderHeight - canvas.height) / 2 / canvas.height;
       }
 
       lastVideoTimeRef.current = video.currentTime;
@@ -148,14 +126,37 @@ export function useHandLandmarker({
 
       // Draw the skeleton if overlay is enabled
       const ctx = canvas?.getContext('2d');
-      if (ctx) {
+      if (canvas && ctx) {
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        ctx.save();
-        ctx.scale(-1, 1);
-        ctx.translate(-canvas.width, 0);
+        if (
+          overlayEnabled &&
+          canvas.width > 0 &&
+          canvas.height > 0 &&
+          results.landmarks.length > 0
+        ) {
+          const videoRatio = video.videoWidth / video.videoHeight;
+          const canvasRatio = canvas.width / canvas.height;
+          let scaleX = 1;
+          let scaleY = 1;
+          let offsetX = 0;
+          let offsetY = 0;
 
-        if (overlayEnabled && results.landmarks.length > 0) {
+          if (videoRatio > canvasRatio) {
+            const renderWidth = canvas.height * videoRatio;
+            scaleX = renderWidth / canvas.width;
+            offsetX = (renderWidth - canvas.width) / 2 / canvas.width;
+          } else if (videoRatio < canvasRatio) {
+            const renderHeight = canvas.width / videoRatio;
+            scaleY = renderHeight / canvas.height;
+            offsetY = (renderHeight - canvas.height) / 2 / canvas.height;
+          }
+
+          ctx.save();
+          ctx.scale(-1, 1);
+          ctx.translate(-canvas.width, 0);
           const drawingUtils = new DrawingUtils(ctx);
 
           for (const landmarks of results.landmarks) {
@@ -177,12 +178,11 @@ export function useHandLandmarker({
               radius: 3,
             });
           }
+          ctx.restore();
         }
-
-        setIsTracking(results.landmarks.length > 0);
-
-        ctx.restore();
       }
+
+      setIsTracking(results.landmarks.length > 0);
 
       // Emit a throttled snapshot when hands are visible
       const now = performance.now();
