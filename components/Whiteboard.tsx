@@ -60,7 +60,6 @@ import {
 } from '@/hooks/useGestureDrawing';
 import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
-import type { HelpContext } from '@/constants/featureHelp';
 
 const WHITEBOARD_TOPIC = 'handy-meet-whiteboard-v1';
 const CURSOR_TOPIC = 'handy-meet-whiteboard-cursors-v1';
