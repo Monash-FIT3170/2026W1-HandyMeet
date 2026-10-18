@@ -58,6 +58,7 @@ import {
   useGestureDrawing,
   type DrawingStroke,
 } from '@/hooks/useGestureDrawing';
+import type { HelpContext } from '@/constants/featureHelp';
 import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
 
