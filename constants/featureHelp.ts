@@ -64,7 +64,7 @@ export const featureHelp: readonly FeatureHelpContent[] = [
         outcome:
           'These controls change your own devices. You can participate with your camera off.',
         troubleshooting:
-          'If others cannot hear you, check that your microphone is on and browser permission is allowed. Turning the camera off also disables meeting hand tracking.',
+          'If others cannot hear you, check that your microphone is on and browser permission is allowed. Hand tracking can stay on when video sharing is off; the camera is then used locally for gestures.',
       },
       {
         title: 'Share your screen',
@@ -153,14 +153,24 @@ export const featureHelp: readonly FeatureHelpContent[] = [
       {
         title: 'Enable hand tracking',
         steps: [
-          'Turn your camera on.',
+          'Allow camera access when prompted. Your video can stay off.',
           'Open Gestures in the bottom toolbar and switch Hand tracking on.',
           'Keep your hands fully visible and well lit. Check the dropdown for Hand detected.',
         ],
         outcome:
           'Hand detected means the tracker can see a hand; it does not mean a particular gesture has been recognised.',
         troubleshooting:
-          'If Hand tracking is disabled, turn the camera on first. For No hand detected, move your hand into view and improve lighting. If it persists, check camera permission and try toggling tracking off and on.',
+          'For No hand detected, move your hand into view and improve lighting. If camera access fails, check camera permission and try toggling tracking off and on.',
+      },
+      {
+        title: 'Use gestures with video off',
+        steps: [
+          'Open Gestures and switch Hand tracking on.',
+          'Turn video off using the camera control in the bottom toolbar.',
+          'Keep using gestures. Switch Hand tracking off when you want to release the camera too.',
+        ],
+        outcome:
+          'Other participants stop receiving your video. Your camera remains active locally for hand recognition, and recognised gestures still trigger meeting actions.',
       },
       {
         title: 'Perform a meeting gesture',
@@ -179,10 +189,10 @@ export const featureHelp: readonly FeatureHelpContent[] = [
         steps: [
           'Open Gestures and switch Show overlay on to see landmarks on your own camera tile. Hand tracking must already be on.',
           'Switch Hand tracking off when you no longer want gestures to trigger meeting actions.',
-          'If you turned your camera off, turn it on and enable Hand tracking again to resume.',
+          'Turn video on to see the overlay again. Hand tracking continues while video is off.',
         ],
         outcome:
-          'The overlay is a visual aid on your local tile. Recognition can run without it. Turning your camera off disables meeting hand tracking.',
+          'The overlay is a visual aid on your local tile. Recognition can run without it, including while video sharing is off.',
       },
     ],
   },
