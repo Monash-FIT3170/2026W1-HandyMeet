@@ -352,6 +352,36 @@ describe('useHandLandmarker', () => {
     expect(drawConnectors).not.toHaveBeenCalled();
   });
 
+  it('recognizes hands and emits gestures without a visible video tile or canvas', async () => {
+    (FilesetResolver.forVisionTasks as jest.Mock).mockResolvedValue({});
+    const detectForVideo = jest.fn(() => ({
+      landmarks: [[{ x: 0.5, y: 0.5 }]],
+      handedness: [[{ categoryName: 'Right', score: 0.9 }]],
+    }));
+    (HandLandmarker.createFromOptions as jest.Mock).mockResolvedValue({
+      detectForVideo,
+      close: jest.fn(),
+    });
+    const onLandmarksSnapshot = jest.fn();
+    const options: HookOptions = {
+      videoRef: { current: makeVideoMock() },
+      canvasRef: { current: null },
+      trackingEnabled: true,
+      overlayEnabled: false,
+      onLandmarksSnapshot,
+      snapshotIntervalMs: 0,
+    };
+    const { result } = renderHook(useHandLandmarker, { initialProps: options });
+    await act(async () => {
+      await flushPromises();
+      flushRAF();
+    });
+
+    expect(detectForVideo).toHaveBeenCalled();
+    expect(result.current.isTracking).toBe(true);
+    expect(onLandmarksSnapshot).toHaveBeenCalled();
+  });
+
   it('does not re-run detection for the same video frame', async () => {
     (FilesetResolver.forVisionTasks as jest.Mock).mockResolvedValue({});
     const detectForVideo = jest.fn(() => ({ landmarks: [], handedness: [] }));
