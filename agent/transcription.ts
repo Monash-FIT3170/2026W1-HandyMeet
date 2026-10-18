@@ -107,80 +107,89 @@ export default defineAgent({
       });
     };
 
-    ctx.room.on(RoomEvent.DataReceived, (payload, participant, _kind, topic) => {
-      if (
-        topic !== LIVE_INSIGHTS_TOPIC ||
-        !participant ||
-        participant.identity.toLowerCase().startsWith('agent-')
-      ) {
-        return;
-      }
-
-      try {
-        const message: unknown = JSON.parse(new TextDecoder().decode(payload));
-        if (isLiveInsightsSnapshotRequest(message)) {
-          void publishActionItems(participant.identity).catch((error) => {
-            console.error('Live action item snapshot failed:', error);
-          });
-          return;
-        }
-
-        if (isLiveInsightsCoordinatorClaim(message)) {
-          participantClaims.set(participant.identity, message.joinedAt);
-          if (!coordinatorWasHandedOff) publishElectedCoordinator();
-          void publishCoordinatorState(participant.identity).catch((error) => {
-            console.error('Live insights coordinator state failed:', error);
-          });
-          return;
-        }
-
-        if (isLiveInsightsCoordinatorStateRequest(message)) {
-          void publishCoordinatorState(participant.identity).catch((error) => {
-            console.error('Live insights coordinator state failed:', error);
-          });
-          return;
-        }
-
+    ctx.room.on(
+      RoomEvent.DataReceived,
+      (payload, participant, _kind, topic) => {
         if (
-          isLiveInsightsMutation(message) &&
-          participant.identity === coordinatorIdentity
+          topic !== LIVE_INSIGHTS_TOPIC ||
+          !participant ||
+          participant.identity.toLowerCase().startsWith('agent-')
         ) {
-          const actionItem = knownActionItems.find(
-            (item) => item.id === message.itemId,
-          );
-          if (!actionItem) return;
+          return;
+        }
 
-          if (message.operation === 'accept') {
-            actionItem.status = 'accepted';
-          } else if (message.operation === 'dismiss') {
-            actionItem.status = 'dismissed';
-          } else if (message.operation === 'edit') {
-            Object.assign(actionItem, message.updates);
-          } else if (message.operation === 'assign') {
-            actionItem.assigneeId = message.assigneeId;
+        try {
+          const message: unknown = JSON.parse(
+            new TextDecoder().decode(payload),
+          );
+          if (isLiveInsightsSnapshotRequest(message)) {
+            void publishActionItems(participant.identity).catch((error) => {
+              console.error('Live action item snapshot failed:', error);
+            });
+            return;
           }
 
-          void publishActionItems().catch((error) => {
-            console.error('Live action item update failed:', error);
-          });
-          return;
-        }
+          if (isLiveInsightsCoordinatorClaim(message)) {
+            participantClaims.set(participant.identity, message.joinedAt);
+            if (!coordinatorWasHandedOff) publishElectedCoordinator();
+            void publishCoordinatorState(participant.identity).catch(
+              (error) => {
+                console.error('Live insights coordinator state failed:', error);
+              },
+            );
+            return;
+          }
 
-        if (
-          isLiveInsightsCoordinatorHandoff(message) &&
-          participant.identity === coordinatorIdentity &&
-          participantClaims.has(message.targetIdentity)
-        ) {
-          coordinatorIdentity = message.targetIdentity;
-          coordinatorWasHandedOff = true;
-          void publishCoordinatorState().catch((error) => {
-            console.error('Live insights coordinator handoff failed:', error);
-          });
+          if (isLiveInsightsCoordinatorStateRequest(message)) {
+            void publishCoordinatorState(participant.identity).catch(
+              (error) => {
+                console.error('Live insights coordinator state failed:', error);
+              },
+            );
+            return;
+          }
+
+          if (
+            isLiveInsightsMutation(message) &&
+            participant.identity === coordinatorIdentity
+          ) {
+            const actionItem = knownActionItems.find(
+              (item) => item.id === message.itemId,
+            );
+            if (!actionItem) return;
+
+            if (message.operation === 'accept') {
+              actionItem.status = 'accepted';
+            } else if (message.operation === 'dismiss') {
+              actionItem.status = 'dismissed';
+            } else if (message.operation === 'edit') {
+              Object.assign(actionItem, message.updates);
+            } else if (message.operation === 'assign') {
+              actionItem.assigneeId = message.assigneeId;
+            }
+
+            void publishActionItems().catch((error) => {
+              console.error('Live action item update failed:', error);
+            });
+            return;
+          }
+
+          if (
+            isLiveInsightsCoordinatorHandoff(message) &&
+            participant.identity === coordinatorIdentity &&
+            participantClaims.has(message.targetIdentity)
+          ) {
+            coordinatorIdentity = message.targetIdentity;
+            coordinatorWasHandedOff = true;
+            void publishCoordinatorState().catch((error) => {
+              console.error('Live insights coordinator handoff failed:', error);
+            });
+          }
+        } catch (error) {
+          console.error('Failed to parse live insight request:', error);
         }
-      } catch (error) {
-        console.error('Failed to parse live insight request:', error);
-      }
-    });
+      },
+    );
 
     const collectActionItems = async () => {
       if (collectionInFlight || pendingTranscriptLines.length === 0) return;
