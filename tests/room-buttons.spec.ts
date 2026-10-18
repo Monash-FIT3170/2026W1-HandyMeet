@@ -161,6 +161,44 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(overlay).toBeDisabled();
   });
 
+  test('Then hand tracking can be enabled with video off and releases its camera when stopped', async ({
+    page,
+  }) => {
+    await joinRoom(page);
+    const camera = cameraButton(page);
+    await expect(camera).toHaveAttribute('aria-pressed', 'true');
+    await camera.click();
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+
+    await page.getByTitle('Gestures').click();
+    const handTracking = page.getByRole('button', { name: 'Hand tracking' });
+    await expect(handTracking).toBeEnabled();
+    await handTracking.click();
+    await expect(handTracking).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('button', { name: 'Show overlay' }),
+    ).toBeDisabled();
+    const trackingCamera = page.locator('video[data-hand-tracking-camera]');
+    await expect
+      .poll(() =>
+        trackingCamera.evaluate(
+          (video: HTMLVideoElement) =>
+            (video.srcObject as MediaStream | null)?.getVideoTracks()[0]
+              ?.readyState,
+        ),
+      )
+      .toBe('live');
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+
+    await handTracking.click();
+    await expect
+      .poll(() =>
+        trackingCamera.evaluate((video: HTMLVideoElement) => video.srcObject),
+      )
+      .toBeNull();
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+  });
+
   test('Then leaving opens the transcript summary and its actions work', async ({
     page,
   }) => {

@@ -96,10 +96,12 @@ async function installVideoCamera(page: Page, initialGesture: GestureName) {
 
       streamPromise ??= buildStream(initialVideoSrc);
       const stream = await streamPromise;
-      return new MediaStream([
-        ...(constraints.audio ? stream.getAudioTracks() : []),
-        ...(constraints.video ? stream.getVideoTracks() : []),
-      ]);
+      return new MediaStream(
+        [
+          ...(constraints.audio ? stream.getAudioTracks() : []),
+          ...(constraints.video ? stream.getVideoTracks() : []),
+        ].map((track) => track.clone()),
+      );
     };
 
     window.__handyMeetSetGestureVideoSource = async (src: string) => {
@@ -158,6 +160,33 @@ async function enableHandTracking(page: Page) {
 test.describe('video-driven gesture E2E', () => {
   test.describe.configure({ mode: 'serial' });
   test.use({ permissions: ['camera', 'microphone'] });
+
+  test('recognizes a new gesture after shared video is turned off', async ({
+    page,
+  }) => {
+    await joinRoomWithGestureVideo(page, 'mute');
+    await enableHandTracking(page);
+    await expect
+      .poll(() => readGestureActions(page), { timeout: GESTURE_TIMEOUT_MS })
+      .toContain('mute');
+
+    const camera = page.getByRole('button', { name: /camera/i });
+    await camera.click();
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+    await expect(
+      page.getByRole('button', { name: 'Hand tracking' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText(/camera is used locally/)).toBeVisible();
+
+    await page.evaluate(() => {
+      window.__handyMeetGestureActions = [];
+    });
+    await setGestureVideo(page, 'raiseHand');
+    await expect
+      .poll(() => readGestureActions(page), { timeout: GESTURE_TIMEOUT_MS })
+      .toContain('raiseHand');
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+  });
 
   /*
   test('given cameraOff video when hand tracking runs then turns off the local camera', async ({
