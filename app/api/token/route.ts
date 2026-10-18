@@ -1,10 +1,10 @@
 import { cookies } from 'next/headers';
 import { AccessToken, RoomServiceClient } from 'livekit-server-sdk';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { ROOM_CODE_MAX_LENGTH, USERNAME_MAX_LENGTH } from '@/constants/meeting';
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const jar = await cookies();
   const room = jar.get('room')?.value;
   const username = jar.get('username')?.value;

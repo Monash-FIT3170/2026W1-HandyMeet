@@ -1,9 +1,21 @@
-import { NextRequest } from 'next/server';
 import { GET } from './route';
 
-function tokenRequest(params: Record<string, string>): NextRequest {
-  const search = new URLSearchParams(params).toString();
-  return new NextRequest(`http://localhost/api/token?${search}`);
+const mockCookies = new Map<string, string>();
+
+jest.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: (name: string) =>
+      mockCookies.has(name)
+        ? { name, value: mockCookies.get(name) }
+        : undefined,
+  }),
+}));
+
+function setCookies(values: Record<string, string>) {
+  mockCookies.clear();
+  for (const [name, value] of Object.entries(values)) {
+    mockCookies.set(name, value);
+  }
 }
 
 async function withLiveKitEnv<T>(
@@ -41,16 +53,24 @@ async function withLiveKitEnv<T>(
 }
 
 describe('GET /api/token', () => {
-  test('returns 400 when room is missing', async () => {
-    const response = await GET(tokenRequest({ username: 'sam' }));
+  beforeEach(() => {
+    mockCookies.clear();
+  });
+
+  test('returns 400 when the room cookie is missing', async () => {
+    setCookies({ username: 'sam' });
+
+    const response = await GET();
 
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.error).toMatch(/Missing room or username/);
   });
 
-  test('returns 400 when username is missing', async () => {
-    const response = await GET(tokenRequest({ room: 'standup' }));
+  test('returns 400 when the username cookie is missing', async () => {
+    setCookies({ room: 'standup' });
+
+    const response = await GET();
 
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -88,9 +108,9 @@ describe('GET /api/token', () => {
   });
 
   test('returns 500 when LiveKit server credentials are not configured', async () => {
-    const response = await withLiveKitEnv({}, () =>
-      GET(tokenRequest({ room: 'standup', username: 'sam' })),
-    );
+    setCookies({ room: 'standup', username: 'sam' });
+
+    const response = await withLiveKitEnv({}, () => GET());
 
     expect(response.status).toBe(500);
     const body = await response.json();
