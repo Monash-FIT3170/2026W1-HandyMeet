@@ -20,7 +20,7 @@ const actions: { label: ReferenceLabel; title: string; result: string }[] = [
     label: 'cameraOff',
     title: 'Camera off',
     result:
-      'Your camera and meeting hand tracking turn off. Use the camera button to turn video on again.',
+      'Your shared video turns off. Hand tracking stays on locally. Use the camera button to turn video on again.',
   },
   {
     label: 'endCall',
