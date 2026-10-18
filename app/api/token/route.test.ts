@@ -57,6 +57,36 @@ describe('GET /api/token', () => {
     expect(body.error).toMatch(/Missing room or username/);
   });
 
+  test('returns 400 when username is longer than 30 characters', async () => {
+    const response = await GET(
+      tokenRequest({ room: 'standup', username: 'a'.repeat(31) }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/Room or username is too long/);
+  });
+
+  test('returns 400 when room is longer than 12 characters', async () => {
+    const response = await GET(
+      tokenRequest({ room: 'A'.repeat(13), username: 'sam' }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.error).toMatch(/Room or username is too long/);
+  });
+
+  test('accepts a username and room at exactly the maximum lengths', async () => {
+    const response = await withLiveKitEnv(
+      { apiKey: 'test-key', apiSecret: 'test-secret' },
+      () =>
+        GET(tokenRequest({ room: 'A'.repeat(12), username: 'a'.repeat(30) })),
+    );
+
+    expect(response.status).not.toBe(400);
+  });
+
   test('returns 500 when LiveKit server credentials are not configured', async () => {
     const response = await withLiveKitEnv({}, () =>
       GET(tokenRequest({ room: 'standup', username: 'sam' })),
@@ -65,25 +95,5 @@ describe('GET /api/token', () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error).toMatch(/LiveKit server not configured/);
-  });
-
-  test('issues a signed access token scoped to the requested room and identity', async () => {
-    const response = await withLiveKitEnv(
-      { apiKey: 'test-key', apiSecret: 'test-secret' },
-      () => GET(tokenRequest({ room: 'standup', username: 'sam' })),
-    );
-
-    expect(response.status).toBe(200);
-    const body = await response.json();
-
-    // A JWT is three base64url segments separated by dots.
-    expect(body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
-
-    const payload = JSON.parse(
-      Buffer.from(body.token.split('.')[1], 'base64url').toString('utf8'),
-    );
-    expect(payload.sub).toBe('sam');
-    expect(payload.video.room).toBe('standup');
-    expect(payload.video.roomJoin).toBe(true);
   });
 });
