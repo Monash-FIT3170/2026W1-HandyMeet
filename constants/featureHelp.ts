@@ -114,8 +114,7 @@ export const featureHelp: readonly FeatureHelpContent[] = [
           'Switch Show Captions off to hide text, or on to show it.',
           'Close Caption Settings when finished. Opening or closing settings does not change caption visibility.',
         ],
-        outcome:
-          'Incoming text is shown when Show Captions is on. When text exists but is hidden, the display shows CC: Hidden.',
+        outcome: 'Incoming text is shown when Show Captions is on.',
         troubleshooting:
           'An empty display can mean no caption text has arrived. Ask someone to speak and check Show Captions. If speech still does not appear, ask the organiser to check transcription; participants cannot start the transcription service from this panel.',
       },
@@ -210,7 +209,7 @@ export const featureHelp: readonly FeatureHelpContent[] = [
           'Select Whiteboard in the meeting toolbar.',
           'Choose Draw in the canvas toolbar and drag on the canvas to draw. Choose a shape tool and drag to create a shape.',
           'Choose Text, click on the canvas, and type. Switch to Select to move or resize an object.',
-          'Use Undo in the canvas controls to undo your last edit. Select Close in the whiteboard header to return to meeting tiles.',
+          'Use Undo in the canvas controls to undo your last edit. Deselect whiteboard button in control bar to return to meeting tiles.',
         ],
         outcome:
           'Other participants can see and edit the shared canvas. Your microphone, camera, and caption controls remain available.',

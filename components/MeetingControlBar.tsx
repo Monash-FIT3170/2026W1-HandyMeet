@@ -223,12 +223,11 @@ export default function MeetingControlBar({
             </button>
           </>
         )}
-
         <button
           type="button"
           className="lk-button"
           aria-haspopup="dialog"
-          onClick={() => onOpenHelp('meeting')}
+          onClick={() => onOpenHelp(whiteboardOpen ? 'whiteboard' : 'meeting')}
         >
           <span aria-hidden="true">?</span>
           Help
