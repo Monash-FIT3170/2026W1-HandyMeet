@@ -119,7 +119,6 @@ export default function RoomClient({
               captionSettings={captionSettings}
               onCaptionSettingsChange={setCaptionSettings}
               whiteboardOpen={whiteboardOpen}
-              onOpenHelp={setHelpContext}
               onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
             />
           )}
