@@ -47,7 +47,6 @@ import { useHandLandmarker } from '@/hooks/useHandLandmarker';
 import { useHandTrackingCamera } from '@/hooks/useHandTrackingCamera';
 import { useLiveActionItems } from '@/hooks/useLiveActionItems';
 import { useMeetingParticipants } from '@/hooks/useMeetingParticipants';
-import type { HelpContext } from '@/constants/featureHelp';
 import {
   useGestureCaptions,
   type TimestampedTranscriptEntry,
@@ -120,7 +119,6 @@ type MeetingRoomProps = {
   onLeave: (transcriptLines: string[]) => void;
   renderControls: (controls: MeetingControls) => ReactNode;
   onLocalVideoRef?: (video: HTMLVideoElement | null) => void;
-  onOpenHelp: (context: HelpContext) => void;
 };
 
 export default function MeetingRoom({
@@ -128,7 +126,6 @@ export default function MeetingRoom({
   onLeave,
   renderControls,
   onLocalVideoRef,
-  onOpenHelp,
 }: MeetingRoomProps) {
   const [widgetState, setWidgetState] =
     useState<WidgetState>(initialWidgetState);
