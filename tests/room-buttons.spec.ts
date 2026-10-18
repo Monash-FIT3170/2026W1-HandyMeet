@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, test, type Locator } from '@playwright/test';
 
 const ROOM_READY_TIMEOUT = 15_000;
 
@@ -24,10 +24,13 @@ async function joinRoom(page: Page) {
   await page.getByPlaceholder('Your name').fill('button-tester');
   await page.getByPlaceholder('Room code').fill(roomCode);
   await page.getByRole('button', { name: 'Join Room' }).click();
-  await expect(page).toHaveURL(new RegExp(`/room/${roomCode}`));
+  await expect(page).toHaveURL(/\/room$/, { timeout: 15_000 });
+  expect(page.url()).not.toContain(roomCode);
   await expect(page.getByTitle('Captions')).toBeVisible({
     timeout: ROOM_READY_TIMEOUT,
   });
+
+  return roomCode;
 }
 
 function microphoneButton(page: Page) {
@@ -40,6 +43,18 @@ function cameraButton(page: Page) {
 
 function screenShareButton(page: Page) {
   return page.getByRole('button', { name: /screen share|share screen/i });
+}
+
+function roomCodeButton(page: Page, roomCode: string) {
+  return page.getByRole('button', {
+    name: new RegExp(`Meeting room code ${roomCode}`),
+  });
+}
+
+function visibleText(button: Locator, text: string) {
+  return button
+    .locator('span[aria-hidden="true"]')
+    .getByText(text, { exact: true });
 }
 
 test.describe('Given a user is in a HandyMeet room', () => {
@@ -197,6 +212,92 @@ test.describe('Given a user is in a HandyMeet room', () => {
       )
       .toBeNull();
     await expect(camera).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test.describe('And they use the room code button', () => {
+    test.skip(
+      ({ browserName }) => browserName !== 'chromium',
+      'Clipboard permissions are Chromium-only',
+    );
+    test.use({
+      permissions: [
+        'camera',
+        'microphone',
+        'clipboard-read',
+        'clipboard-write',
+      ],
+    });
+
+    test('Then the room code is hidden until the button is hovered', async ({
+      page,
+    }) => {
+      const roomCode = await joinRoom(page);
+
+      const button = roomCodeButton(page, roomCode);
+      const label = button.getByText('Code', { exact: true });
+      const code = button.getByText(roomCode);
+
+      await expect(label).toHaveCSS('opacity', '1');
+      await expect(code).toHaveCSS('opacity', '0');
+
+      await button.hover();
+      await expect(code).toHaveCSS('opacity', '1');
+      await expect(label).toHaveCSS('opacity', '0');
+
+      await page.mouse.move(0, 0);
+      await expect(code).toHaveCSS('opacity', '0');
+      await expect(label).toHaveCSS('opacity', '1');
+    });
+
+    test('Then clicking the button copies the room code to the clipboard', async ({
+      page,
+    }) => {
+      const roomCode = await joinRoom(page);
+
+      const button = roomCodeButton(page, roomCode);
+      await button.click();
+
+      await expect(visibleText(button, 'Copied!')).toHaveCSS('opacity', '1');
+      await expect(button.locator('[role="status"]')).toHaveText('Copied!');
+
+      const clipboard = await page.evaluate(() =>
+        navigator.clipboard.readText(),
+      );
+      expect(clipboard).toBe(roomCode);
+    });
+
+    test('Then the button returns to its label after copying without revealing the code', async ({
+      page,
+    }) => {
+      const roomCode = await joinRoom(page);
+
+      const button = roomCodeButton(page, roomCode);
+      await button.click();
+      await page.mouse.move(0, 0);
+
+      await expect(visibleText(button, 'Copied!')).toHaveCSS('opacity', '0', {
+        timeout: 4_000,
+      });
+      await expect(button.getByText('Code', { exact: true })).toHaveCSS(
+        'opacity',
+        '1',
+      );
+      await expect(button.getByText(roomCode)).toHaveCSS('opacity', '0');
+    });
+
+    test('Then the room code is revealed when the button is focused by keyboard', async ({
+      page,
+    }) => {
+      const roomCode = await joinRoom(page);
+
+      const button = roomCodeButton(page, roomCode);
+      await button.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+
+      await expect(button).toBeFocused();
+      await expect(button.getByText(roomCode)).toHaveCSS('opacity', '1');
+    });
   });
 
   test('Then leaving opens the transcript summary and its actions work', async ({
