@@ -115,10 +115,10 @@ export default function RoomClient({
           renderControls={(controls) => (
             <MeetingControlBar
               {...controls}
-              onOpenHelp={setHelpContext}
               captionSettings={captionSettings}
               onCaptionSettingsChange={setCaptionSettings}
               whiteboardOpen={whiteboardOpen}
+              onOpenHelp={setHelpContext}
               onToggleWhiteboard={() => setWhiteboardOpen((prev) => !prev)}
             />
           )}
@@ -131,12 +131,7 @@ export default function RoomClient({
           position={whiteboardOpen ? 'whiteboard' : 'default'}
         />
 
-        <Whiteboard
-          isOpen={whiteboardOpen}
-          onOpenHelp={setHelpContext}
-          onClose={() => setWhiteboardOpen(false)}
-          localVideoRef={localVideoRef}
-        />
+        <Whiteboard isOpen={whiteboardOpen} localVideoRef={localVideoRef} />
         {helpContext && (
           <HelpDialog
             context={helpContext}

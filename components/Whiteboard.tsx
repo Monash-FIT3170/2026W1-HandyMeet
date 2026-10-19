@@ -58,7 +58,6 @@ import {
   useGestureDrawing,
   type DrawingStroke,
 } from '@/hooks/useGestureDrawing';
-import type { HelpContext } from '@/constants/featureHelp';
 import { DrawingGesture } from '@/constants/gestures';
 import { addStrokeToTldraw } from '@/helpers/gestures/strokeToTldraw';
 
@@ -93,8 +92,6 @@ type CursorMessage = {
 
 interface WhiteboardProps {
   isOpen: boolean;
-  onClose: () => void;
-  onOpenHelp: (context: HelpContext) => void;
   localVideoRef: React.RefObject<HTMLVideoElement | null>;
 }
 
@@ -127,12 +124,7 @@ const IMPORT_ACTION_ID = 'handymeet-import-svg';
 /** Translation key backing {@link IMPORT_ACTION_ID}'s label. */
 const IMPORT_LABEL_KEY = 'handymeet.import-svg';
 
-export default function Whiteboard({
-  isOpen,
-  onClose,
-  onOpenHelp,
-  localVideoRef,
-}: WhiteboardProps) {
+export default function Whiteboard({ isOpen, localVideoRef }: WhiteboardProps) {
   const room = useRoomContext();
   const { isCameraEnabled } = useLocalParticipant();
   const [store] = useState(() =>
@@ -781,23 +773,6 @@ export default function Whiteboard({
           >
             {status?.text ?? ''}
           </span>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            aria-haspopup="dialog"
-            onClick={() => onOpenHelp('whiteboard')}
-            className="rounded-md bg-neutral-800 px-3 py-1 text-xs text-neutral-100 hover:bg-neutral-600 focus-visible:outline-2 focus-visible:outline-primary-500"
-          >
-            Help
-          </button>
-          <button
-            onClick={onClose}
-            className="text-xs px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-md transition-colors cursor-pointer"
-          >
-            Close
-          </button>
         </div>
       </div>
 
