@@ -73,10 +73,8 @@ async function joinRoom(page: Page, username: string, roomCode: string) {
   await page.getByPlaceholder('Room code').fill(roomCode);
   await page.getByRole('button', { name: 'Join Room' }).click();
 
-  await expect(page).toHaveURL(
-    new RegExp(`/room/${roomCode}\\?username=${encodeURIComponent(username)}`),
-    { timeout: PER_USER_READY_TIMEOUT },
-  );
+  await expect(page).toHaveURL(/\/room$/, { timeout: PER_USER_READY_TIMEOUT });
+  expect(page.url()).not.toContain(roomCode);
   await expect(page.getByTitle('Captions')).toBeVisible({
     timeout: PER_USER_READY_TIMEOUT,
   });
