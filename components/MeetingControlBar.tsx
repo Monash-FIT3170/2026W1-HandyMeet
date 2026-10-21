@@ -6,6 +6,7 @@ import TranscriptionSettings, {
   type CaptionSettings,
 } from '@/components/TranscriptionSettings';
 import HandTrackingButton from './button/HandTrackingButton';
+import RoomCodeButton from './button/RoomCodeButton';
 import type { MeetingControls } from './meeting/MeetingRoom';
 import type { HelpContext } from '@/constants/featureHelp';
 
@@ -15,6 +16,7 @@ type MeetingControlBarProps = MeetingControls & {
   whiteboardOpen: boolean;
   onToggleWhiteboard: () => void;
   onOpenHelp: (context: HelpContext) => void;
+  roomCode: string;
 };
 
 export default function MeetingControlBar({
@@ -32,6 +34,7 @@ export default function MeetingControlBar({
   insightsEnabled,
   onToggleInsights,
   onLeave,
+  roomCode,
 }: MeetingControlBarProps) {
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const { isCameraEnabled } = useLocalParticipant();
@@ -68,7 +71,9 @@ export default function MeetingControlBar({
       />
 
       {/* Left spacer */}
-      <div style={{ flex: 1 }} />
+      <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+        <RoomCodeButton roomCode={roomCode} />
+      </div>
 
       {/* Centre pill */}
       <div

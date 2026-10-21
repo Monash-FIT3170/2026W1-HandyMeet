@@ -113,6 +113,7 @@ export default function RoomClient({
           renderControls={(controls) => (
             <MeetingControlBar
               {...controls}
+              roomCode={roomName}
               captionSettings={captionSettings}
               onCaptionSettingsChange={setCaptionSettings}
               whiteboardOpen={whiteboardOpen}
