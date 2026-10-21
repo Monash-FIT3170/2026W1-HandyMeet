@@ -6,12 +6,19 @@ on:
       - main
     paths:
       - 'agent/**'
+      - 'helpers/liveInsights.ts'
+      - 'helpers/liveInsightsProtocol.ts'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
       - 'Dockerfile'
       - '.dockerignore'
+      - 'livekit.toml'
+      - '.github/workflows/deploy-agent.yml'
       - '!**/*.md'
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -24,13 +31,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate deployment secrets
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+          DEEPGRAM_API_KEY: ${{ secrets.DEEPGRAM_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          missing=0
+          for name in LIVEKIT_URL LIVEKIT_API_KEY LIVEKIT_API_SECRET DEEPGRAM_API_KEY GROQ_API_KEY; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing production environment secret: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Deploy LiveKit Cloud Agent
         uses: livekit/deploy-action@v2.12.2
         env:
           LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
           LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
           LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
-          SECRET_LIST: DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }}
+          SECRET_LIST: DEEPGRAM_API_KEY=${{ secrets.DEEPGRAM_API_KEY }},GROQ_API_KEY=${{ secrets.GROQ_API_KEY }}
         with:
           OPERATION: deploy
           WORKING_DIRECTORY: '.'
+
+      - name: Verify agent is running
+        uses: livekit/deploy-action@v2.12.2
+        env:
+          LIVEKIT_URL: ${{ secrets.LIVEKIT_URL }}
+          LIVEKIT_API_KEY: ${{ secrets.LIVEKIT_API_KEY }}
+          LIVEKIT_API_SECRET: ${{ secrets.LIVEKIT_API_SECRET }}
+        with:
+          OPERATION: status-retry
+          WORKING_DIRECTORY: '.'
+          TIMEOUT: 5m

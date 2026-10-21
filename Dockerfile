@@ -2,7 +2,8 @@ FROM node:22-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN HUSKY=0 npm ci
 COPY agent/ ./agent/
+COPY helpers/liveInsights.ts helpers/liveInsightsProtocol.ts ./helpers/
 COPY tsconfig.json ./
 CMD ["node_modules/.bin/tsx", "agent/transcription.ts", "start"]
