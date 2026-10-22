@@ -189,41 +189,42 @@ npx playwright test ./path/to/file.ts # for a specific test
 
 HandyMeet consists of several cooperating components.
 
-```mermaid
-flowchart TD
-    subgraph Browser["User Browser"]
-        UI["Next.js / React UI"]
-        Gesture["MediaPipe + TensorFlow.js<br/>Gesture & Sign Recognition"]
-        Whiteboard["tldraw Whiteboard"]
-    end
-
-    subgraph Backend["Application Backend - Vercel"]
-        NextAPI["Next.js API Routes<br/>Meeting Tokens & Backend Logic"]
-    end
-
-    subgraph LiveKit["LiveKit Cloud"]
-        RTC["WebRTC Audio / Video<br/>Chat & Screen Sharing"]
-        Agent["LiveKit Agent<br/>TypeScript Transcription"]
-    end
-
-    subgraph AI["External AI Services"]
-        Deepgram["Deepgram<br/>Speech-to-Text"]
-        Gemini["Gemini<br/>Meeting Summaries"]
-        Groq["Groq<br/>Live Action Items"]
-    end
-
-    UI <--> NextAPI
-    UI <--> RTC
-    Gesture --> UI
-    Whiteboard <--> RTC
-
-    NextAPI --> RTC
-    RTC <--> Agent
-    Agent <--> Deepgram
-
-    NextAPI -.-> Gemini
-    NextAPI -.-> Groq
-```
+                         ┌────────────────────────────┐
+                         │        User Browser        │
+                         │                            │
+                         │   Next.js / React UI       │
+                         │   MediaPipe                │
+                         │   TensorFlow.js Model      │
+                         │   tldraw Whiteboard        │
+                         └─────────────┬──────────────┘
+                                       │
+                    ┌──────────────────┴──────────────────┐
+                    │                                     │
+                    ▼                                     ▼
+       ┌────────────────────────┐           ┌────────────────────────┐
+       │     Next.js Backend    │           │     LiveKit Cloud      │
+       │        (Vercel)        │           │                        │
+       │                        │           │ WebRTC Audio / Video   │
+       │ API Routes             │           │ Chat & Screen Sharing │
+       │ Meeting Tokens         │           │ Whiteboard Sync       │
+       └────────────┬───────────┘           └────────────┬───────────┘
+                    │                                    │
+             ┌──────┴──────┐                             ▼
+             │             │                ┌────────────────────────┐
+             ▼             ▼                │      LiveKit Agent     │
+       ┌───────────┐ ┌───────────┐          │        TypeScript      │
+       │  Gemini   │ │   Groq    │          │                        │
+       │           │ │           │          │ Audio Processing       │
+       │ Meeting   │ │ Live      │          │ Transcription          │
+       │ Summaries │ │ Action    │          │ Live Captions          │
+       │           │ │ Items     │          └────────────┬───────────┘
+       └───────────┘ └───────────┘                       │
+                                                        ▼
+                                           ┌────────────────────────┐
+                                           │        Deepgram        │
+                                           │                        │
+                                           │     Speech-to-Text     │
+                                           └────────────────────────┘
 
 ### Next.js Application
 
