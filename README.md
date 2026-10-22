@@ -25,7 +25,7 @@ The following software is required for development of HandyMeet.
 - Git
   Used to clone and manage the repository
 - Node.js
-  Used to run the project without Docker (v26.10.0 is recommended)
+  Used to run the project without Docker (v24.22.1 LTS is recommended)
 - npm
   Used to install dependencies and run development scripts
 - Accounts and API keys for:
@@ -189,30 +189,41 @@ npx playwright test ./path/to/file.ts # for a specific test
 
 HandyMeet consists of several cooperating components.
 
-                         ┌──────────────────────┐
-                         │      User Browser    │
-                         │                      │
-                         │ Next.js / React UI   │
-                         │ MediaPipe            │
-                         │ TensorFlow.js Model  │
-                         │ tldraw Whiteboard    │
-                         └──────────┬───────────┘
-                                    │
-                             WebRTC / WebSocket
-                                    │
-                           ┌────────▼────────┐
-                           │    LiveKit      │
-                           │     Cloud       │
-                           └───────┬─────────┘
-                                   │
-                    ┌──────────────▼──────────────┐
-                    │      LiveKit Agent          │
-                    │        TypeScript           │
-                    │                             │
-                    │ Deepgram transcription      │
-                    │ Gemini summaries            │
-                    │ Groq action-item processing │
-                    └─────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Browser["User Browser"]
+        UI["Next.js / React UI"]
+        Gesture["MediaPipe + TensorFlow.js<br/>Gesture & Sign Recognition"]
+        Whiteboard["tldraw Whiteboard"]
+    end
+
+    subgraph Backend["Application Backend - Vercel"]
+        NextAPI["Next.js API Routes<br/>Meeting Tokens & Backend Logic"]
+    end
+
+    subgraph LiveKit["LiveKit Cloud"]
+        RTC["WebRTC Audio / Video<br/>Chat & Screen Sharing"]
+        Agent["LiveKit Agent<br/>TypeScript Transcription"]
+    end
+
+    subgraph AI["External AI Services"]
+        Deepgram["Deepgram<br/>Speech-to-Text"]
+        Gemini["Gemini<br/>Meeting Summaries"]
+        Groq["Groq<br/>Live Action Items"]
+    end
+
+    UI <--> NextAPI
+    UI <--> RTC
+    Gesture --> UI
+    Whiteboard <--> RTC
+
+    NextAPI --> RTC
+    RTC <--> Agent
+    Agent <--> Deepgram
+
+    NextAPI -.-> Gemini
+    NextAPI -.-> Groq
+```
 
 ### Next.js Application
 
@@ -435,7 +446,7 @@ If a previously working feature suddenly no longer works, check whether the acco
 
 ## Known Technical Debt
 
-There is currently no known technical debt. Previous technical debt of deprecated packages such as react-test-renderer has been since rectified.
+No outstanding technical debt has been identified at the time of writing this handover documentation. Previously identified deprecated packages such as react-test-renderer, have been addressed and rectified.
 
 ## Notes for Future Developers
 
