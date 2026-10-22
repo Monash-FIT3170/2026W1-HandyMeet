@@ -254,7 +254,11 @@ export default defineAgent({
       const transcript = text.trim();
       if (!transcript) return;
 
-      pendingTranscriptLines.push(`${participantIdentity}: ${transcript}`);
+      // Look up the name per line since it can be renumbered mid-meeting.
+      const speakerName =
+        ctx.room.remoteParticipants.get(participantIdentity)?.name?.trim() ||
+        participantIdentity;
+      pendingTranscriptLines.push(`${speakerName}: ${transcript}`);
       scheduleCollection();
     };
 
