@@ -78,9 +78,9 @@ describe('GET /api/token', () => {
   });
 
   test('returns 400 when username is longer than 30 characters', async () => {
-    const response = await GET(
-      tokenRequest({ room: 'standup', username: 'a'.repeat(31) }),
-    );
+    setCookies({ room: 'standup', username: 'a'.repeat(31) });
+
+    const response = await GET();
 
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -88,9 +88,9 @@ describe('GET /api/token', () => {
   });
 
   test('returns 400 when room is longer than 12 characters', async () => {
-    const response = await GET(
-      tokenRequest({ room: 'A'.repeat(13), username: 'sam' }),
-    );
+    setCookies({ room: 'A'.repeat(13), username: 'sam' });
+
+    const response = await GET();
 
     expect(response.status).toBe(400);
     const body = await response.json();
@@ -98,10 +98,11 @@ describe('GET /api/token', () => {
   });
 
   test('accepts a username and room at exactly the maximum lengths', async () => {
+    setCookies({ room: 'A'.repeat(12), username: 'a'.repeat(30) });
+
     const response = await withLiveKitEnv(
       { apiKey: 'test-key', apiSecret: 'test-secret' },
-      () =>
-        GET(tokenRequest({ room: 'A'.repeat(12), username: 'a'.repeat(30) })),
+      () => GET(),
     );
 
     expect(response.status).not.toBe(400);

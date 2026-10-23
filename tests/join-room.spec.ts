@@ -1,10 +1,19 @@
 import { test, expect, type Page } from '@playwright/test';
 
 const BASE_URL = '/';
+const ROOM_READY_TIMEOUT = 15_000;
 
 async function sessionCookie(page: Page, name: string) {
   const cookies = await page.context().cookies();
   return cookies.find((cookie) => cookie.name === name);
+}
+
+async function chooseMode(page: Page, mode: 'create' | 'join') {
+  await page
+    .getByRole('button', {
+      name: mode === 'create' ? 'Create Meeting' : 'Join Meeting',
+    })
+    .click();
 }
 
 test.describe('Given the HandyMeet landing page', () => {
@@ -17,26 +26,58 @@ test.describe('Given the HandyMeet landing page', () => {
       await expect(page).toHaveTitle(/HandyMeet/);
     });
 
-    test('Then the "Join Room" button is disabled', async ({ page }) => {
-      const joinButton = page.getByRole('button', { name: 'Join Room' });
-      await expect(joinButton).toBeDisabled();
+    test('Then it offers the Create Meeting and Join Meeting options', async ({
+      page,
+    }) => {
+      await expect(
+        page.getByRole('heading', { name: 'Get started' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Create Meeting' }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Join Meeting' }),
+      ).toBeVisible();
+    });
+
+    test('Then the name and room code fields are hidden until a mode is chosen', async ({
+      page,
+    }) => {
+      await expect(page.getByPlaceholder(/your name/i)).toBeHidden();
+      await expect(page.getByPlaceholder(/room code/i)).toBeHidden();
     });
   });
 
-  test.describe('When a user enters only a username', () => {
-    test('Then the "Join Room" button becomes enabled', async ({ page }) => {
-      const joinButton = page.getByRole('button', { name: 'Join Room' });
-      await page.getByPlaceholder(/your name/i).fill('Adrian');
+  test.describe('When a user chooses to create a meeting', () => {
+    test('Then the name field and an optional room code field appear', async ({
+      page,
+    }) => {
+      await chooseMode(page, 'create');
 
-      await expect(joinButton).toBeEnabled();
+      await expect(page.getByPlaceholder(/your name/i)).toBeVisible();
+      await expect(page.getByPlaceholder('Room code (optional)')).toBeVisible();
     });
   });
 
-  test.describe('When a user submits a username and a specific room code', () => {
+  test.describe('When a user chooses to join a meeting', () => {
+    test('Then the name field and a required room code field appear', async ({
+      page,
+    }) => {
+      await chooseMode(page, 'join');
+
+      await expect(page.getByPlaceholder(/your name/i)).toBeVisible();
+      await expect(
+        page.getByPlaceholder('Room code', { exact: true }),
+      ).toBeVisible();
+    });
+  });
+
+  test.describe('When a user creates a meeting with a specific room code', () => {
     test.beforeEach(async ({ page }) => {
+      await chooseMode(page, 'create');
       await page.getByPlaceholder(/your name/i).fill('Adrian');
       await page.getByPlaceholder(/room code/i).fill('TEST12');
-      await page.getByRole('button', { name: 'Join Room' }).click();
+      await page.getByRole('button', { name: 'Create Meeting' }).click();
       await expect(page).toHaveURL(/\/room$/);
     });
 
@@ -55,7 +96,7 @@ test.describe('Given the HandyMeet landing page', () => {
     });
   });
 
-  test.describe('When joining fails on the server', () => {
+  test.describe('When starting the session fails on the server', () => {
     test('Then an error is shown and the user stays on the landing page', async ({
       page,
     }) => {
@@ -67,57 +108,99 @@ test.describe('Given the HandyMeet landing page', () => {
         });
       });
 
+      await chooseMode(page, 'create');
       await page.getByPlaceholder(/your name/i).fill('Adrian');
       await page.getByPlaceholder(/room code/i).fill('TEST12');
-      await page.getByRole('button', { name: 'Join Room' }).click();
+      await page.getByRole('button', { name: 'Create Meeting' }).click();
 
-      await expect(
-        page.getByText('Could not join that room. Try again.'),
-      ).toBeVisible();
       await expect(page).toHaveURL(BASE_URL);
       await expect(
-        page.getByRole('button', { name: 'Join Room' }),
+        page.getByRole('button', { name: 'Create Meeting' }),
       ).toBeEnabled();
+      expect(await sessionCookie(page, 'room')).toBeUndefined();
+    });
+  });
+
+  test.describe('When a user tries to join a meeting that does not exist', () => {
+    test('Then a not-found error is shown and no session is started', async ({
+      page,
+    }) => {
+      await chooseMode(page, 'join');
+      await page.getByPlaceholder(/your name/i).fill('Bob');
+      await page.getByPlaceholder('Room code', { exact: true }).fill('NOPE99');
+      await page.getByRole('button', { name: 'Join Meeting' }).click();
+
+      await expect(
+        page.getByText(/No meeting found with code "NOPE99"/),
+      ).toBeVisible();
+      await expect(page).toHaveURL(BASE_URL);
+      expect(await sessionCookie(page, 'room')).toBeUndefined();
     });
   });
 });
 
 test.describe('Given 2 users want to join the same room', () => {
-  test.describe('When a new room is generated and a second user joins with that code', () => {
+  test.describe('When a new room is created and a second user joins with that code', () => {
     test('Then both users are successfully placed in the exact same room', async ({
       browser,
     }) => {
-      const adrianContext = await browser.newContext();
+      test.setTimeout(60_000);
+
+      const adrianContext = await browser.newContext({
+        permissions: ['camera', 'microphone'],
+      });
       const bobContext = await browser.newContext();
 
-      const adrianPage = await adrianContext.newPage();
-      const bobPage = await bobContext.newPage();
+      try {
+        const adrianPage = await adrianContext.newPage();
+        const bobPage = await bobContext.newPage();
 
-      // Setup User 1 (Adrian), who creates a new room by leaving the code blank
-      await adrianPage.goto(BASE_URL);
-      await adrianPage.getByPlaceholder(/your name/i).fill('Adrian');
-      await adrianPage.getByRole('button', { name: 'Join Room' }).click();
-      await expect(adrianPage).toHaveURL(/\/room$/);
+        // Setup User 1 (Adrian), who creates a new room by leaving the code blank
+        await adrianPage.goto(BASE_URL);
+        await chooseMode(adrianPage, 'create');
+        await adrianPage.getByPlaceholder(/your name/i).fill('Adrian');
+        await adrianPage
+          .getByRole('button', { name: 'Create Meeting' })
+          .click();
+        await expect(adrianPage).toHaveURL(/\/room$/);
 
-      // Extract the generated code from the session cookie (it's not in the URL)
-      const roomCode = (await sessionCookie(adrianPage, 'room'))?.value;
-      expect(roomCode).toMatch(/^[A-Z0-9]{6}$/i);
-      expect(adrianPage.url()).not.toContain(roomCode!);
+        const roomCode = (await sessionCookie(adrianPage, 'room'))?.value;
+        expect(roomCode).toMatch(/^[A-Z0-9]{6}$/i);
+        expect(adrianPage.url()).not.toContain(roomCode!);
 
-      // Setup User 2 (Bob) joining Adrian's room
-      await bobPage.goto(BASE_URL);
-      await bobPage.getByPlaceholder(/your name/i).fill('Bob');
-      await bobPage.getByPlaceholder(/room code/i).fill(roomCode!);
-      await bobPage.getByRole('button', { name: 'Join Room' }).click();
-      await expect(bobPage).toHaveURL(/\/room$/);
+        await expect(adrianPage.getByTitle('Captions')).toBeVisible({
+          timeout: ROOM_READY_TIMEOUT,
+        });
+        await expect
+          .poll(
+            async () => {
+              const response = await adrianPage.request.get(
+                `/api/room-exists?room=${roomCode}`,
+              );
+              return (await response.json()).exists;
+            },
+            { timeout: ROOM_READY_TIMEOUT },
+          )
+          .toBe(true);
 
-      // Assert Bob is in the same room, as himself
-      expect((await sessionCookie(bobPage, 'room'))?.value).toBe(roomCode);
-      expect((await sessionCookie(bobPage, 'username'))?.value).toBe('Bob');
-      expect(bobPage.url()).not.toContain(roomCode!);
+        // Setup User 2 (Bob) joining Adrian's room
+        await bobPage.goto(BASE_URL);
+        await chooseMode(bobPage, 'join');
+        await bobPage.getByPlaceholder(/your name/i).fill('Bob');
+        await bobPage
+          .getByPlaceholder('Room code', { exact: true })
+          .fill(roomCode!);
+        await bobPage.getByRole('button', { name: 'Join Meeting' }).click();
+        await expect(bobPage).toHaveURL(/\/room$/);
 
-      await adrianContext.close();
-      await bobContext.close();
+        // Assert Bob is in the same room, as himself
+        expect((await sessionCookie(bobPage, 'room'))?.value).toBe(roomCode);
+        expect((await sessionCookie(bobPage, 'username'))?.value).toBe('Bob');
+        expect(bobPage.url()).not.toContain(roomCode!);
+      } finally {
+        await adrianContext.close();
+        await bobContext.close();
+      }
     });
   });
 });
