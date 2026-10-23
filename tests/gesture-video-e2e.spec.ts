@@ -139,10 +139,11 @@ async function joinRoomWithGestureVideo(page: Page, gesture: GestureName) {
 
   await installVideoCamera(page, gesture);
   await page.goto('/');
-  await page.getByPlaceholder('Your name').fill(`gesture-${gesture}`);
-  await page.getByPlaceholder('Room code').fill(roomCode);
-  await page.getByRole('button', { name: 'Join Room' }).click();
-  await expect(page).toHaveURL(/\/room$/, { timeout: 15_000 });
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
+  await page.getByPlaceholder('Your name').fill('button-tester');
+  await page.getByPlaceholder('Room code (optional)').fill(roomCode);
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
+
   await expect(page.getByTitle('Gestures')).toBeVisible({ timeout: 15_000 });
   await setGestureVideo(page, gesture);
 }

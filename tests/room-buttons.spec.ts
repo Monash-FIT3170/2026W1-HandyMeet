@@ -21,12 +21,19 @@ async function joinRoom(page: Page) {
 
   await installFakeScreenShare(page);
   await page.goto('/');
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
   await page.getByPlaceholder('Your name').fill('button-tester');
-  await page.getByPlaceholder('Room code').fill(roomCode);
-  await page.getByRole('button', { name: 'Join Room' }).click();
+  await page.getByPlaceholder('Room code (optional)').fill(roomCode);
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
   await expect(page).toHaveURL(/\/room$/, { timeout: 15_000 });
   expect(page.url()).not.toContain(roomCode);
   await expect(page.getByTitle('Captions')).toBeVisible({
+    timeout: ROOM_READY_TIMEOUT,
+  });
+  await expect(microphoneButton(page)).toHaveAttribute('aria-pressed', 'true', {
+    timeout: ROOM_READY_TIMEOUT,
+  });
+  await expect(cameraButton(page)).toHaveAttribute('aria-pressed', 'true', {
     timeout: ROOM_READY_TIMEOUT,
   });
 
@@ -46,7 +53,6 @@ function screenShareButton(page: Page) {
 }
 
 test.describe('Given a user is in a HandyMeet room', () => {
-  test.describe.configure({ mode: 'serial' });
   test.use({ permissions: ['camera', 'microphone'] });
 
   test('Then the microphone button toggles the local microphone', async ({
@@ -158,7 +164,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(overlay).toBeEnabled();
 
     await overlay.click();
-    await expect(overlay).toBeEnabled();
+    await expect(overlay).toHaveAttribute('aria-pressed', 'true');
 
     await handTracking.click();
     await expect(overlay).toBeDisabled();
@@ -191,7 +197,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(page.getByText('28px', { exact: true })).toBeVisible();
   });
 
-  test('Then gesture controls are disabled when the camera is off', async ({
+  test('Then hand tracking works locally with the camera off and the overlay stays disabled', async ({
     page,
   }) => {
     await joinRoom(page);
@@ -202,9 +208,14 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(camera).toHaveAttribute('aria-pressed', 'false');
     await page.getByTitle('Gestures').click();
 
+    const handTracking = page.getByRole('button', { name: 'Hand tracking' });
+    await expect(handTracking).toBeEnabled();
+    await handTracking.click();
+    await expect(handTracking).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByText(/camera is used locally/)).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Hand tracking' }),
-    ).toBeDisabled();
+      page.getByText(/hand detected|no hand detected/i),
+    ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Show overlay' }),
     ).toBeDisabled();
@@ -222,7 +233,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
       page.getByRole('button', { name: 'Gesture Draw', exact: true }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await button.click();
     await expect(
       page.getByRole('button', { name: 'Gesture Draw', exact: true }),
     ).toBeHidden();
@@ -238,7 +249,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 
     await expect(heading).toBeHidden();
-    await expect(page).toHaveURL(/\/room\//);
+    await expect(page).toHaveURL(/\/room$/);
     await expect(microphoneButton(page)).toBeEnabled();
   });
 
