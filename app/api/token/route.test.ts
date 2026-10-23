@@ -119,9 +119,11 @@ describe('GET /api/token', () => {
   });
 
   test('issues a signed access token scoped to the requested room and identity', async () => {
+    setCookies({ room: 'standup', username: 'sam' });
+
     const response = await withLiveKitEnv(
       { apiKey: 'test-key', apiSecret: 'test-secret' },
-      () => GET(tokenRequest({ room: 'standup', username: 'sam' })),
+      () => GET(),
     );
 
     expect(response.status).toBe(200);
