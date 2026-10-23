@@ -69,9 +69,10 @@ async function createFakeUser(
  */
 async function joinRoom(page: Page, username: string, roomCode: string) {
   await page.goto('/');
-  await page.getByPlaceholder('Your name').fill(username);
-  await page.getByPlaceholder('Room code').fill(roomCode);
-  await page.getByRole('button', { name: 'Join Room' }).click();
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
+  await page.getByPlaceholder('Your name').fill('button-tester');
+  await page.getByPlaceholder('Room code (optional)').fill(roomCode);
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
 
   await expect(page).toHaveURL(/\/room$/, { timeout: PER_USER_READY_TIMEOUT });
   expect(page.url()).not.toContain(roomCode);
