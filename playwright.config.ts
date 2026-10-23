@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://127.0.0.1:3000',
     screenshot: 'only-on-failure',
     trace: 'on-first-retry',
   },
@@ -27,8 +27,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: process.env.CI ? 'node .next/standalone/server.js' : 'npm run dev',
+    url: 'http://127.0.0.1:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },
