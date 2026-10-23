@@ -96,4 +96,25 @@ describe('GET /api/token', () => {
     const body = await response.json();
     expect(body.error).toMatch(/LiveKit server not configured/);
   });
+
+  test('issues a signed access token scoped to the requested room and identity', async () => {
+    const response = await withLiveKitEnv(
+      { apiKey: 'test-key', apiSecret: 'test-secret' },
+      () => GET(tokenRequest({ room: 'standup', username: 'sam' })),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+
+    // A JWT is three base64url segments separated by dots.
+    expect(body.token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
+
+    const payload = JSON.parse(
+      Buffer.from(body.token.split('.')[1], 'base64url').toString('utf8'),
+    );
+    expect(payload.sub).toMatch(/^sam-[0-9a-f-]{36}$/);
+    expect(payload.name).toBe('sam');
+    expect(payload.video.room).toBe('standup');
+    expect(payload.video.roomJoin).toBe(true);
+  });
 });
