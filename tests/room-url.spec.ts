@@ -11,10 +11,11 @@ async function joinRoom(page: Page, visitedUrls: string[]) {
   });
 
   await page.goto('/');
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
   await page.getByPlaceholder('Your name').fill(USERNAME);
-  await page.getByPlaceholder('Room code').fill(roomCode);
-  await page.getByRole('button', { name: 'Join Room' }).click();
-  await expect(page).toHaveURL(/\/room$/);
+  await page.getByPlaceholder('Room code (optional)').fill(roomCode);
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
+  await expect(page).toHaveURL(/\/room$/, { timeout: ROOM_READY_TIMEOUT });
   await expect(page.getByTitle('Captions')).toBeVisible({
     timeout: ROOM_READY_TIMEOUT,
   });

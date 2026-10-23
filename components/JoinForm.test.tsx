@@ -25,6 +25,17 @@ function mockFetchResponse(status: number, body: unknown = {}) {
   });
 }
 
+function sessionRequestBody() {
+  const call = fetchMock.mock.calls.find(([url]) => url === '/api/room');
+  return call ? JSON.parse(call[1].body) : undefined;
+}
+
+function roomExistsCalled() {
+  return fetchMock.mock.calls.some(([url]) =>
+    String(url).includes('/api/room-exists'),
+  );
+}
+
 function nameInput(): HTMLInputElement {
   return screen.getByPlaceholderText('Your name') as HTMLInputElement;
 }
@@ -46,6 +57,13 @@ async function submit(label: RegExp) {
 beforeEach(() => {
   push.mockReset();
   fetchMock.mockReset();
+  global.fetch = fetchMock as unknown as typeof fetch;
+
+  fetchMock.mockImplementation(async (url: string) =>
+    url === '/api/room'
+      ? { status: 200, ok: true, json: async () => ({ ok: true }) }
+      : { status: 500, ok: false, json: async () => ({}) },
+  );
   global.fetch = fetchMock as unknown as typeof fetch;
 });
 
@@ -150,31 +168,34 @@ describe('JoinForm', () => {
       expect(push).not.toHaveBeenCalled();
     });
 
-    test('navigates to the custom room with a trimmed, encoded name', async () => {
+    test('starts a session with the trimmed name and uppercased room code, then opens /room', async () => {
       fireEvent.change(nameInput(), { target: { value: '  Sam Lee  ' } });
       fireEvent.change(codeInput('Room code (optional)'), {
         target: { value: 'standup' },
       });
       await submit(/create meeting/i);
 
-      expect(push).toHaveBeenCalledWith('/room/STANDUP?username=Sam%20Lee');
+      expect(sessionRequestBody()).toEqual({
+        room: 'STANDUP',
+        username: 'Sam Lee',
+      });
+      expect(push).toHaveBeenCalledWith('/room');
     });
 
     test('generates a 6-character room code when none is given', async () => {
       fireEvent.change(nameInput(), { target: { value: 'Sam' } });
       await submit(/create meeting/i);
 
+      expect(sessionRequestBody().room).toMatch(/^[A-Z0-9]{6}$/);
       expect(push).toHaveBeenCalledTimes(1);
-      expect(push.mock.calls[0][0]).toMatch(
-        /^\/room\/[A-Z0-9]{6}\?username=Sam$/,
-      );
+      expect(push).toHaveBeenCalledWith('/room');
     });
 
     test('does not check whether the room exists', async () => {
       fireEvent.change(nameInput(), { target: { value: 'Sam' } });
       await submit(/create meeting/i);
 
-      expect(fetchMock).not.toHaveBeenCalled();
+      expect(roomExistsCalled()).toBe(false);
     });
 
     test('submits when Enter is pressed in the form', async () => {
@@ -223,7 +244,8 @@ describe('JoinForm', () => {
       await submit(/join meeting/i);
 
       expect(fetchMock).toHaveBeenCalledWith('/api/room-exists?room=ABC123');
-      expect(push).toHaveBeenCalledWith('/room/ABC123?username=Sam');
+      expect(sessionRequestBody()).toEqual({ room: 'ABC123', username: 'Sam' });
+      expect(push).toHaveBeenCalledWith('/room');
     });
 
     test('shows a not-found error when the room does not exist', async () => {
@@ -236,6 +258,7 @@ describe('JoinForm', () => {
           'No meeting found with code "NOPE". Check the code and try again.',
         ),
       ).toBeTruthy();
+      expect(sessionRequestBody()).toBeUndefined();
       expect(push).not.toHaveBeenCalled();
     });
 
