@@ -4,6 +4,8 @@ import type { Room, LocalParticipant } from 'livekit-client';
 import { handleAction } from '@/helpers/gestures/handler';
 import { Gesture } from '@/constants/gestures';
 import { Reaction } from '@/constants/reactions';
+import { CaptionGesture } from '@/constants/captions';
+import * as captions from '@/helpers/gestures/captions';
 
 /**
  * Unit tests for handler.ts
@@ -28,6 +30,23 @@ describe('handleAction', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
+  });
+
+  it('routes captions to the publisher without emitting a gesture action event', async () => {
+    const publishCaption = jest
+      .spyOn(captions, 'publishGestureCaption')
+      .mockResolvedValue(undefined);
+    const dispatchEvent = jest.spyOn(window, 'dispatchEvent');
+
+    const result = await handleAction(mockRoom, CaptionGesture.a);
+
+    expect(result).toBe(true);
+    expect(publishCaption).toHaveBeenCalledTimes(1);
+    expect(publishCaption).toHaveBeenCalledWith(mockRoom, CaptionGesture.a);
+    expect(dispatchEvent).not.toHaveBeenCalled();
+    expect(mockLocalParticipant.setMicrophoneEnabled).not.toHaveBeenCalled();
+    expect(mockLocalParticipant.setCameraEnabled).not.toHaveBeenCalled();
   });
 
   describe('with valid Gesture actions', () => {
