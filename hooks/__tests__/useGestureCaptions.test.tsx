@@ -76,6 +76,179 @@ describe('useGestureCaptions', () => {
     jest.useRealTimers();
   });
 
+  test('returns empty captions and no active phrase without a room', () => {
+    const { getResult } = renderHookHarness(undefined);
+
+    expect(getResult().gestureCaptions).toEqual([]);
+    expect(getResult().gestureTranscriptEntries).toEqual([]);
+    expect(getResult().flushActive()).toBeNull();
+  });
+
+  test.each([
+    ['H', 'i', 3499, 'Hi'],
+    ['H', 'i', 3500, 'H i'],
+    ['Hello', 'there', 0, 'Hello there'],
+    ['Hello', 'A', 0, 'Hello A'],
+    ['A', 'hello', 0, 'A hello'],
+  ])(
+    'joins %s and %s after %i ms as %s and renews caption expiry',
+    (first, second, delay, expected) => {
+      const room = createMockRoom();
+      const { getResult } = renderHookHarness(room);
+      const alice = { identity: 'Alice' } as Participant;
+
+      act(() => {
+        room.__emit(
+          RoomEvent.DataReceived,
+          encodePayload({ text: first }),
+          alice,
+          undefined,
+          GESTURE_CAPTION_TOPIC,
+        );
+        jest.advanceTimersByTime(delay);
+        room.__emit(
+          RoomEvent.DataReceived,
+          encodePayload({ text: second }),
+          alice,
+          undefined,
+          GESTURE_CAPTION_TOPIC,
+        );
+      });
+
+      expect(getResult().gestureCaptions).toEqual([
+        { text: expected, participantInfo: alice },
+      ]);
+      expect(getResult().gestureTranscriptEntries).toEqual([]);
+
+      act(() => {
+        jest.advanceTimersByTime(6999);
+      });
+      expect(getResult().gestureCaptions).toHaveLength(1);
+      expect(getResult().gestureTranscriptEntries).toEqual([]);
+
+      act(() => {
+        jest.advanceTimersByTime(1);
+      });
+      expect(getResult().gestureCaptions).toEqual([]);
+      expect(getResult().gestureTranscriptEntries).toEqual([
+        { text: `Alice: ${expected}`, timestamp: expect.any(Number) },
+      ]);
+    },
+  );
+
+  test('ignores data published on another topic', () => {
+    const room = createMockRoom();
+    const { getResult } = renderHookHarness(room);
+
+    act(() => {
+      room.__emit(
+        RoomEvent.DataReceived,
+        encodePayload({ text: 'Hello' }),
+        { identity: 'Alice' },
+        undefined,
+        'other-topic',
+      );
+    });
+
+    expect(getResult().gestureCaptions).toEqual([]);
+    expect(getResult().gestureTranscriptEntries).toEqual([]);
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
+  test('logs invalid JSON and continues receiving valid captions', () => {
+    const room = createMockRoom();
+    const { getResult } = renderHookHarness(room);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      act(() => {
+        room.__emit(
+          RoomEvent.DataReceived,
+          new TextEncoder().encode('{'),
+          undefined,
+          undefined,
+          GESTURE_CAPTION_TOPIC,
+        );
+      });
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Failed to parse incoming caption: ',
+        expect.any(Error),
+      );
+      expect(getResult().gestureCaptions).toEqual([]);
+
+      act(() => {
+        room.__emit(
+          RoomEvent.DataReceived,
+          encodePayload({ text: 'Hello' }),
+          { identity: 'Alice' },
+          undefined,
+          GESTURE_CAPTION_TOPIC,
+        );
+      });
+      expect(getResult().gestureCaptions[0].text).toBe('Hello');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  test('flushes a caption without a sender as Unknown only once', () => {
+    const room = createMockRoom();
+    const { getResult } = renderHookHarness(room);
+
+    act(() => {
+      room.__emit(
+        RoomEvent.DataReceived,
+        encodePayload({ text: 'Hello' }),
+        { identity: 'Alice' },
+        undefined,
+        GESTURE_CAPTION_TOPIC,
+      );
+      room.__emit(
+        RoomEvent.DataReceived,
+        encodePayload({ text: 'Goodbye' }),
+        undefined,
+        undefined,
+        GESTURE_CAPTION_TOPIC,
+      );
+    });
+
+    act(() => {
+      expect(getResult().flushActive()).toEqual({
+        text: 'Unknown: Goodbye',
+        timestamp: expect.any(Number),
+      });
+      expect(getResult().flushActive()).toBeNull();
+      jest.advanceTimersByTime(7000);
+    });
+    expect(
+      getResult().gestureTranscriptEntries.map((entry) => entry.text),
+    ).toEqual(['Alice: Hello', 'Unknown: Goodbye']);
+  });
+
+  test('removes its listener and cancels a pending expiry on unmount', () => {
+    const room = createMockRoom();
+    const { unmount } = renderHookHarness(room);
+
+    act(() => {
+      room.__emit(
+        RoomEvent.DataReceived,
+        encodePayload({ text: 'Hello' }),
+        { identity: 'Alice' },
+        undefined,
+        GESTURE_CAPTION_TOPIC,
+      );
+    });
+    expect(jest.getTimerCount()).toBe(1);
+
+    unmount();
+
+    expect(room.off).toHaveBeenCalledWith(
+      RoomEvent.DataReceived,
+      (room.on as jest.Mock).mock.calls[0][1],
+    );
+    expect(jest.getTimerCount()).toBe(0);
+  });
+
   test('commits gesture speech into transcript entries after duration timeout', () => {
     const room = createMockRoom();
     const { getResult } = renderHookHarness(room);
