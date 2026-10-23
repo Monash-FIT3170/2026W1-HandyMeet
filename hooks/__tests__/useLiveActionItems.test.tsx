@@ -10,6 +10,7 @@ import {
   LIVE_INSIGHTS_COORDINATOR_STATE_REQUEST_TYPE,
   LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
   LIVE_INSIGHTS_MESSAGE_TYPE,
+  LIVE_INSIGHTS_MUTATION_TYPE,
   LIVE_INSIGHTS_SNAPSHOT_REQUEST_TYPE,
   LIVE_INSIGHTS_TOPIC,
 } from '@/helpers/liveInsightsProtocol';
@@ -310,5 +311,217 @@ describe('useLiveActionItems receiving updates and coordinating', () => {
     for (const [event, listener] of (second.room.on as jest.Mock).mock.calls) {
       expect(second.room.off).toHaveBeenCalledWith(event, listener);
     }
+  });
+});
+
+describe('useLiveActionItems mutations', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each([
+    [
+      'accept',
+      (hook: ReturnType<typeof useLiveActionItems>) => hook.acceptItem(item.id),
+      { status: 'accepted' },
+      [{ operation: 'accept' }],
+    ],
+    [
+      'accept with owner',
+      (hook: ReturnType<typeof useLiveActionItems>) =>
+        hook.acceptItem(item.id, 'Alice'),
+      { status: 'accepted', owner: 'Alice' },
+      [
+        { operation: 'accept' },
+        { operation: 'edit', updates: { owner: 'Alice' } },
+      ],
+    ],
+    [
+      'dismiss',
+      (hook: ReturnType<typeof useLiveActionItems>) =>
+        hook.dismissItem(item.id),
+      { status: 'dismissed' },
+      [{ operation: 'dismiss' }],
+    ],
+    [
+      'edit',
+      (hook: ReturnType<typeof useLiveActionItems>) =>
+        hook.editItem(item.id, {
+          task: 'Send revised notes',
+          owner: null,
+          dueDate: '2026-10-30',
+        }),
+      { task: 'Send revised notes', owner: null, dueDate: '2026-10-30' },
+      [
+        {
+          operation: 'edit',
+          updates: {
+            task: 'Send revised notes',
+            owner: null,
+            dueDate: '2026-10-30',
+          },
+        },
+      ],
+    ],
+    [
+      'assign',
+      (hook: ReturnType<typeof useLiveActionItems>) =>
+        hook.assignUser(item.id, 'user-2'),
+      { assigneeId: 'user-2' },
+      [{ operation: 'assign', assigneeId: 'user-2' }],
+    ],
+    [
+      'unassign',
+      (hook: ReturnType<typeof useLiveActionItems>) =>
+        hook.assignUser(item.id, null),
+      { assigneeId: null },
+      [{ operation: 'assign', assigneeId: null }],
+    ],
+  ] as const)(
+    'publishes %s and updates only the matching item immediately',
+    (_name, mutate, patch, messages) => {
+      const mock = createRoom();
+      const { result } = renderHook(() =>
+        useLiveActionItems({ room: mock.room }),
+      );
+      const untouched = { ...item, id: 'item-2' };
+      mock.receive({
+        type: LIVE_INSIGHTS_MESSAGE_TYPE,
+        actionItems: [item, untouched],
+      });
+      mock.publishData.mockClear();
+
+      act(() => mutate(result.current));
+
+      expect(result.current.actionItems).toEqual([
+        { ...item, ...patch },
+        untouched,
+      ]);
+      expect(mock.messages()).toEqual(
+        messages.map((message) => ({
+          type: LIVE_INSIGHTS_MUTATION_TYPE,
+          itemId: item.id,
+          ...message,
+        })),
+      );
+      for (const [, options] of mock.publishData.mock.calls) {
+        expect(options).toEqual({ reliable: true, topic: LIVE_INSIGHTS_TOPIC });
+      }
+    },
+  );
+
+  it('combines consecutive optimistic changes and lets the next agent snapshot replace them', () => {
+    const mock = createRoom();
+    const { result } = renderHook(() =>
+      useLiveActionItems({ room: mock.room }),
+    );
+    mock.receive({ type: LIVE_INSIGHTS_MESSAGE_TYPE, actionItems: [item] });
+
+    act(() => {
+      result.current.acceptItem(item.id, 'Alice');
+      result.current.assignUser(item.id, 'user-2');
+    });
+
+    expect(result.current.actionItems).toEqual([
+      { ...item, status: 'accepted', owner: 'Alice', assigneeId: 'user-2' },
+    ]);
+    mock.receive({ type: LIVE_INSIGHTS_MESSAGE_TYPE, actionItems: [item] });
+    expect(result.current.actionItems).toEqual([item]);
+  });
+
+  it('blocks every mutation and handoff for a non-coordinator', () => {
+    const mock = createRoom();
+    const { result } = renderHook(() =>
+      useLiveActionItems({ room: mock.room }),
+    );
+    mock.receive({ type: LIVE_INSIGHTS_MESSAGE_TYPE, actionItems: [item] });
+    mock.receive({
+      type: LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
+      coordinatorIdentity: 'other-user',
+    });
+    mock.publishData.mockClear();
+
+    act(() => {
+      result.current.acceptItem(item.id, 'Alice');
+      result.current.dismissItem(item.id);
+      result.current.editItem(item.id, { task: 'Changed' });
+      result.current.assignUser(item.id, 'user-2');
+      result.current.transferCoordinator('third-user');
+    });
+
+    expect(mock.publishData).not.toHaveBeenCalled();
+    expect(result.current.actionItems).toEqual([item]);
+    expect(result.current.coordinatorIdentity).toBe('other-user');
+  });
+
+  it('hands off immediately in fallback mode and ignores transfer to self', () => {
+    const mock = createRoom();
+    const { result } = renderHook(() =>
+      useLiveActionItems({ room: mock.room }),
+    );
+    mock.publishData.mockClear();
+
+    act(() => result.current.transferCoordinator('local-user'));
+    expect(mock.publishData).not.toHaveBeenCalled();
+    act(() => result.current.transferCoordinator('other-user'));
+
+    expect(result.current.coordinatorIdentity).toBe('other-user');
+    expect(mock.messages()).toEqual([
+      {
+        type: LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
+        targetIdentity: 'other-user',
+      },
+    ]);
+  });
+
+  it('waits for agent confirmation when transferring an agent-appointed coordinator', () => {
+    const mock = createRoom();
+    const { result } = renderHook(() =>
+      useLiveActionItems({ room: mock.room }),
+    );
+    mock.receive({
+      type: LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
+      coordinatorIdentity: 'local-user',
+    });
+    mock.publishData.mockClear();
+
+    act(() => result.current.transferCoordinator('other-user'));
+
+    expect(result.current.isCoordinator).toBe(true);
+    expect(mock.messages()).toEqual([
+      {
+        type: LIVE_INSIGHTS_COORDINATOR_HANDOFF_TYPE,
+        targetIdentity: 'other-user',
+      },
+    ]);
+    mock.receive({
+      type: LIVE_INSIGHTS_COORDINATOR_STATE_TYPE,
+      coordinatorIdentity: 'other-user',
+    });
+    expect(result.current.isCoordinator).toBe(false);
+  });
+
+  it('logs rejected mutations and keeps the optimistic update until an agent snapshot arrives', async () => {
+    const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const mock = createRoom();
+    const { result } = renderHook(() =>
+      useLiveActionItems({ room: mock.room }),
+    );
+    mock.receive({ type: LIVE_INSIGHTS_MESSAGE_TYPE, actionItems: [item] });
+    const failure = new Error('offline');
+    mock.publishData.mockRejectedValue(failure);
+
+    await act(async () => result.current.dismissItem(item.id));
+
+    expect(error).toHaveBeenCalledWith(
+      'Failed to update live action item:',
+      failure,
+    );
+    expect(result.current.actionItems).toEqual([
+      { ...item, status: 'dismissed' },
+    ]);
+    expect(result.current.error).toBeNull();
+    mock.receive({ type: LIVE_INSIGHTS_MESSAGE_TYPE, actionItems: [item] });
+    expect(result.current.actionItems).toEqual([item]);
   });
 });
