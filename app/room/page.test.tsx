@@ -1,6 +1,17 @@
 import { redirect } from 'next/navigation';
 import RoomPage from './page';
 
+const mockCookies = new Map<string, string>();
+
+jest.mock('next/headers', () => ({
+  cookies: async () => ({
+    get: (name: string) =>
+      mockCookies.has(name)
+        ? { name, value: mockCookies.get(name) }
+        : undefined,
+  }),
+}));
+
 jest.mock('next/navigation', () => ({
   redirect: jest.fn(() => {
     throw new Error('NEXT_REDIRECT');
@@ -14,11 +25,11 @@ jest.mock('@/components/RoomClient', () => ({
 
 const redirectMock = redirect as unknown as jest.Mock;
 
-function renderPage(roomName: string, username?: string) {
-  return RoomPage({
-    params: Promise.resolve({ roomName }),
-    searchParams: Promise.resolve(username === undefined ? {} : { username }),
-  });
+function renderPage(roomName?: string, username?: string) {
+  mockCookies.clear();
+  if (roomName !== undefined) mockCookies.set('room', roomName);
+  if (username !== undefined) mockCookies.set('username', username);
+  return RoomPage();
 }
 
 beforeEach(() => redirectMock.mockClear());
@@ -49,6 +60,16 @@ describe('RoomPage', () => {
     expect(redirectMock).not.toHaveBeenCalled();
   });
 
+  test('redirects home when there is no room cookie', async () => {
+    await expect(renderPage(undefined, 'Sam')).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirectMock).toHaveBeenCalledWith('/');
+  });
+
+  test('redirects home when there is no session at all', async () => {
+    await expect(renderPage()).rejects.toThrow('NEXT_REDIRECT');
+    expect(redirectMock).toHaveBeenCalledWith('/');
+  });
+
   test('redirects home when the room code is longer than 12 characters', async () => {
     await expect(renderPage('A'.repeat(13), 'Sam')).rejects.toThrow(
       'NEXT_REDIRECT',
@@ -56,9 +77,8 @@ describe('RoomPage', () => {
     expect(redirectMock).toHaveBeenCalledWith('/');
   });
 
-  test('measures the decoded room code length', async () => {
-    // 12 characters once decoded, but 18 while still URL-encoded.
-    await renderPage('%20%20%20ABCDEFGHI', 'Sam');
+  test('accepts a room code of exactly 12 characters', async () => {
+    await renderPage('A'.repeat(12), 'Sam');
 
     expect(redirectMock).not.toHaveBeenCalled();
   });
