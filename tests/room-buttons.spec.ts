@@ -243,7 +243,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
       page.getByRole('button', { name: 'Gesture Draw', exact: true }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await button.click();
     await expect(
       page.getByRole('button', { name: 'Gesture Draw', exact: true }),
     ).toBeHidden();
