@@ -1,4 +1,4 @@
-import { expect, type Page, test, type Locator } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const ROOM_READY_TIMEOUT = 15_000;
 
@@ -43,18 +43,6 @@ function cameraButton(page: Page) {
 
 function screenShareButton(page: Page) {
   return page.getByRole('button', { name: /screen share|share screen/i });
-}
-
-function roomCodeButton(page: Page, roomCode: string) {
-  return page.getByRole('button', {
-    name: new RegExp(`Meeting room code ${roomCode}`),
-  });
-}
-
-function visibleText(button: Locator, text: string) {
-  return button
-    .locator('span[aria-hidden="true"]')
-    .getByText(text, { exact: true });
 }
 
 test.describe('Given a user is in a HandyMeet room', () => {
@@ -281,7 +269,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
 
     const downloadPromise = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download' }).click();
-    await expect((await downloadPromise).suggestedFilename()).toBe(
+    expect((await downloadPromise).suggestedFilename()).toBe(
       'meeting-notes.txt',
     );
 

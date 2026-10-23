@@ -19,7 +19,6 @@ import type { HelpContext } from '@/constants/featureHelp';
 
 export default function RoomClient({
   roomName,
-  username,
 }: {
   roomName: string;
   username: string;
