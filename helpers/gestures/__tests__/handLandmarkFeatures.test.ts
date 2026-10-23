@@ -2,6 +2,7 @@ import type { Category, NormalizedLandmark } from '@mediapipe/tasks-vision';
 import {
   buildHandFeatureVectors,
   HAND_FEATURE_VECTOR_LENGTH,
+  VALUES_PER_HAND,
 } from '@/helpers/gestures/handLandmarkFeatures';
 
 /**
@@ -212,6 +213,26 @@ describe('buildHandFeatureVectors', () => {
   });
 
   describe('when multiple hands of same label are detected', () => {
+    it('should retain the stronger detection when a weaker duplicate arrives later', () => {
+      const strongerHand = createMockHand(0);
+      const weakerHand = createMockHand(0.1);
+      weakerHand[1].x += 0.05;
+
+      const result = buildHandFeatureVectors(
+        [strongerHand, weakerHand],
+        [
+          createMockHandedness('right', 0.95),
+          createMockHandedness('right', 0.8),
+        ],
+      );
+
+      expect(result.right).not.toBeNull();
+      expect(result.right![VALUES_PER_HAND + 3]).toBe(0);
+      expect(result.left).not.toBeNull();
+      expect(result.left![3]).toBeGreaterThan(0);
+      expect(result.both).not.toBeNull();
+    });
+
     it('should prefer hand with higher confidence for left label', () => {
       // Given
       const leftHand1 = createMockHand(0);
@@ -233,6 +254,35 @@ describe('buildHandFeatureVectors', () => {
   });
 
   describe('when handedness labels are invalid', () => {
+    it('should recognize a mixed-case display name when category name is empty', () => {
+      const handedness = createMockHandedness('right');
+      handedness[0].categoryName = '';
+      handedness[0].displayName = 'RiGhT';
+
+      const result = buildHandFeatureVectors([createMockHand()], [handedness]);
+
+      expect(result.left).toBeNull();
+      expect(result.right).toHaveLength(HAND_FEATURE_VECTOR_LENGTH);
+      expect(result.both).toBeNull();
+    });
+
+    it('should order unlabeled hands by wrist position regardless of detection order', () => {
+      const leftHand = createMockHand(0);
+      const rightHand = createMockHand(0.2);
+      rightHand[1].x += 0.05;
+
+      const result = buildHandFeatureVectors([rightHand, leftHand], []);
+      const reordered = buildHandFeatureVectors([leftHand, rightHand], []);
+
+      expect(result).toEqual(reordered);
+      expect(result.left).not.toBeNull();
+      expect(result.left![3]).toBe(0);
+      expect(result.right).not.toBeNull();
+      expect(result.right![VALUES_PER_HAND + 3]).toBeGreaterThan(0);
+      expect(result.both).not.toBeNull();
+      expect(result.both![VALUES_PER_HAND]).toBeGreaterThan(0);
+    });
+
     it('should handle unknown handedness labels by assigning to unassigned slots', () => {
       // Given - unknown label will fall through to be assigned left/right by position
       const hand = createMockHand(0);
