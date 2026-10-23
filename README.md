@@ -377,6 +377,157 @@ The following external accounts must be transferred to the next development team
 | LiveKit Cloud     | Michael Alexander                                                     | Add future developers/project owner  |
 | GitHub Repository | Tam Quan, Shen-Kit Hia, Michael Alexander, 2026 FIT3170 Teaching Team | Add developers for repository access |
 
+## Versioning and Git Practice
+
+### Versioning and Releases
+
+The original development team will no longer maintain this repository. Developers continuing the project should create a fork and manage future releases within that fork. The following strategy is recommended and can be adapted to suit the new team's needs.
+
+#### Version Numbers
+
+Use semantic versioning in the format `MAJOR.MINOR.PATCH`:
+
+| Component | When to increase it                                                                 | Example                                                                        |
+| --------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| **MAJOR** | A release introduces breaking changes that require users or maintainers to migrate. | Changing the deployment configuration in a way that requires manual migration. |
+| **MINOR** | A release adds functionality while preserving existing supported behaviour.         | Adding a new meeting feature.                                                  |
+| **PATCH** | A release fixes bugs without introducing breaking changes.                          | Correcting how participant names appear in chat.                               |
+
+The application currently declares version `0.1.0` in `package.json`. Versions below `1.0.0` represent initial development, during which compatibility may change. During this stage, document breaking changes clearly and use minor version increments for significant changes.
+
+Future maintainers should choose a `1.0.0` release when they consider the application stable, its supported behaviour defined, and its deployment and handover documentation complete.
+
+#### Preparing a Release
+
+For each release, maintainers should:
+
+1. Select the next version based on the changes included.
+2. Update the version in `package.json` and the corresponding entries in `package-lock.json`.
+3. Document new features, fixes, breaking changes, configuration changes, and known limitations.
+4. Complete automated checks and manually verify the main meeting workflows.
+5. Merge the approved release into `main`.
+6. Tag the released commit as `vX.Y.Z`, such as `v1.0.0`, and create a GitHub Release with the release notes.
+7. Verify the deployed application and LiveKit agent, recording any deployment steps that require manual action.
+
+Release notes should include migration instructions whenever existing deployments need changes.
+
+#### Suggested Branch Structure
+
+Use `dev` to integrate ongoing development and `main` for approved releases. A `staging` branch can optionally support testing in a separate environment before release.
+
+Feature and bug-fix branches should normally target `dev`. Release changes should progress from `dev` to `staging`, if used, and then to `main` through reviewed pull requests.
+
+Fork maintainers must configure their own deployment accounts, secrets, branch protections, and automation. Review the existing GitHub workflows before adopting this structure, as some checks and deployment actions are configured for particular branches.
+
+### Contributing and Pull Requests
+
+Future development should take place in a maintained fork. Contributors should submit pull requests to that fork rather than relying on review or merging by the original development team.
+
+#### Original Team Pull Request Strategy
+
+The original team used ticket-based feature branches and pull requests to integrate changes into `dev`. The workflow was:
+
+1. Create a focused branch from `dev`, using the ticket number and a short description in the branch name.
+2. Include the same ticket number in commit messages and the pull request title so changes can be traced to their task.
+3. Open a pull request targeting `dev` and complete the repository's pull request template below.
+4. Validate changes locally and check the GitHub Actions results. The existing workflows run lint, formatting, TypeScript checks, and unit tests for pull requests targeting `dev`, `staging`, and `main`.
+5. Request reviewer approval and address feedback before merging. Review should consider design decisions and overall correctness as well as individual code changes.
+6. Resolve conflicts with the target branch and rerun relevant checks before merging.
+7. Merge the approved changes and delete the completed feature branch.
+
+The recommendations below extend this workflow for future maintainers. In particular, squash merging and the suggested release process are recommendations rather than requirements imposed on a fork.
+
+#### Pull Request Template Used by the Team
+
+The team used [`.github/pull_request_template.md`](.github/pull_request_template.md) to record the purpose, scope, validation, and limitations of each change. Future maintainers can retain this file in their fork and use the following template when submitting a pull request:
+
+```markdown
+## Summary
+
+Briefly describe the purpose of this PR
+
+## Checklist
+
+- [ ] Removed debug code and unnecessary comments
+- [ ] Updated documentation if needed
+- [ ] PR is focused on a single feature/fix
+- [ ] Added screenshots/videos if applicable
+
+## Changes
+
+-
+-
+-
+
+## Testing
+
+Describe how this was tested, and how reviewers can test the changes.
+
+## Additional Notes
+
+- **limitations**:
+- **follow-up work**:
+- **known issues**:
+- **design decisions**:
+```
+
+#### Starting a Change
+
+Create a branch from the fork's latest `dev` branch. Keep each branch focused on one feature, bug fix, or documentation task.
+
+Use a descriptive branch name, preferably including a ticket or issue identifier:
+
+```text
+<ticket-number>-<short-description>
+```
+
+For example:
+
+```text
+14yhc7kvt89-handover-versioning-guide
+```
+
+Use the same identifier in related commit messages and pull request titles. A recommended commit format is:
+
+```text
+<ticket-number>: <brief imperative description>
+
+Explain the reason for the change and any useful implementation context.
+```
+
+Future maintainers can adopt their own issue numbering system.
+
+#### Preparing a Pull Request
+
+Before submitting a pull request:
+
+1. Review the diff and remove debug code, unused code, and unrelated changes.
+2. Update documentation and tests where the change affects existing behaviour.
+3. Run the repository checks:
+
+   ```bash
+   npm run check
+   npm test -- --runInBand
+   npm run build
+   ```
+
+4. Run relevant Playwright tests and manually verify affected workflows where applicable.
+5. Bring the branch up to date with its target branch and resolve conflicts.
+
+For branches owned by one contributor, rebasing onto the latest target branch is recommended. For shared branches, coordinate with other contributors before rewriting history.
+
+#### Review and Merge
+
+Open the pull request against the fork's `dev` branch and complete the template in [`.github/pull_request_template.md`](.github/pull_request_template.md).
+
+Include the purpose of the change, its associated ticket or issue, testing evidence, and any limitations. Add screenshots or recordings for visible interface changes.
+
+Maintainers should require at least one reviewer's approval and passing required checks before merging. Reviewers should check correctness, readability, test coverage, and compatibility with existing functionality.
+
+Squash merging is recommended for focused feature branches to keep the integration history easy to follow. Preserve the ticket or issue identifier in the resulting commit message.
+
+After merging, delete the completed branch. Promote approved changes to release branches through separate pull requests following the release strategy above.
+
 ## Commmon Issues and Troublesohoting
 
 ### Camera/Microphone does not work
