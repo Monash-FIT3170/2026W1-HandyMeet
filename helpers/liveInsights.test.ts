@@ -23,7 +23,7 @@ describe('extractLiveActionItems', () => {
       { task: 'Arrange a follow-up', owner: null, dueDate: null },
     ];
     const fetchImpl = jest
-      .fn<typeof fetch>()
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
       .mockResolvedValue(completion(JSON.stringify({ newActionItems: items })));
 
     await expect(
@@ -72,5 +72,89 @@ describe('extractLiveActionItems', () => {
     expect(requestBody.messages[0].content).toContain(
       "Today's date is 2026-10-24",
     );
+  });
+
+  test('rejects a missing API key before making a request', async () => {
+    const fetchImpl = jest.fn<
+      ReturnType<typeof fetch>,
+      Parameters<typeof fetch>
+    >();
+
+    await expect(
+      extractLiveActionItems({ ...options, apiKey: '', fetchImpl }),
+    ).rejects.toThrow('GROQ_API_KEY is missing from .env.local.');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  test('includes the status and provider error body when a request fails', async () => {
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(new Response('Rate limit exceeded', { status: 429 }));
+
+    await expect(
+      extractLiveActionItems({ ...options, fetchImpl }),
+    ).rejects.toThrow('Groq request failed (429): Rate limit exceeded');
+  });
+
+  test('propagates network failures so callers can handle them', async () => {
+    const error = new Error('Connection lost');
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockRejectedValue(error);
+
+    await expect(
+      extractLiveActionItems({ ...options, fetchImpl }),
+    ).rejects.toBe(error);
+  });
+
+  test('propagates invalid provider response JSON', async () => {
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(new Response('Service temporarily unavailable'));
+
+    await expect(
+      extractLiveActionItems({ ...options, fetchImpl }),
+    ).rejects.toMatchObject({ name: 'SyntaxError' });
+  });
+
+  test.each([
+    ['malformed JSON', 'Here are your action items'],
+    ['an empty string', ''],
+    ['null', 'null'],
+    ['a primitive', '42'],
+    ['an array', '[]'],
+    ['a missing action items field', '{}'],
+    ['a null action items field', '{"newActionItems":null}'],
+    [
+      'an object action items field',
+      '{"newActionItems":{"task":"Send report"}}',
+    ],
+  ])(
+    'returns no items when the generated content is %s',
+    async (_name, content) => {
+      const fetchImpl = jest
+        .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+        .mockResolvedValue(completion(content));
+
+      await expect(
+        extractLiveActionItems({ ...options, fetchImpl }),
+      ).resolves.toEqual([]);
+    },
+  );
+
+  test.each([
+    ['missing choices', {}],
+    ['empty choices', { choices: [] }],
+    ['missing message', { choices: [{}] }],
+    ['missing content', { choices: [{ message: {} }] }],
+    ['null content', { choices: [{ message: { content: null } }] }],
+  ])('returns no items for a response with %s', async (_name, body) => {
+    const fetchImpl = jest
+      .fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>()
+      .mockResolvedValue(Response.json(body));
+
+    await expect(
+      extractLiveActionItems({ ...options, fetchImpl }),
+    ).resolves.toEqual([]);
   });
 });
