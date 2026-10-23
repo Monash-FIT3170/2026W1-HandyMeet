@@ -1,4 +1,4 @@
-import { expect, type Page, test, type Locator } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 
 const ROOM_READY_TIMEOUT = 15_000;
 
@@ -21,9 +21,10 @@ async function joinRoom(page: Page) {
 
   await installFakeScreenShare(page);
   await page.goto('/');
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
   await page.getByPlaceholder('Your name').fill('button-tester');
-  await page.getByPlaceholder('Room code').fill(roomCode);
-  await page.getByRole('button', { name: 'Join Room' }).click();
+  await page.getByPlaceholder('Room code (optional)').fill(roomCode);
+  await page.getByRole('button', { name: 'Create Meeting' }).click();
   await expect(page).toHaveURL(/\/room$/, { timeout: 15_000 });
   expect(page.url()).not.toContain(roomCode);
   await expect(page.getByTitle('Captions')).toBeVisible({
@@ -43,18 +44,6 @@ function cameraButton(page: Page) {
 
 function screenShareButton(page: Page) {
   return page.getByRole('button', { name: /screen share|share screen/i });
-}
-
-function roomCodeButton(page: Page, roomCode: string) {
-  return page.getByRole('button', {
-    name: new RegExp(`Meeting room code ${roomCode}`),
-  });
-}
-
-function visibleText(button: Locator, text: string) {
-  return button
-    .locator('span[aria-hidden="true"]')
-    .getByText(text, { exact: true });
 }
 
 test.describe('Given a user is in a HandyMeet room', () => {
@@ -203,7 +192,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(page.getByText('28px', { exact: true })).toBeVisible();
   });
 
-  test('Then gesture controls are disabled when the camera is off', async ({
+  test('Then hand tracking can be enabled with video off and releases its camera when stopped', async ({
     page,
   }) => {
     await joinRoom(page);
@@ -214,12 +203,32 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await expect(camera).toHaveAttribute('aria-pressed', 'false');
     await page.getByTitle('Gestures').click();
 
-    await expect(
-      page.getByRole('button', { name: 'Hand tracking' }),
-    ).toBeDisabled();
+    const handTracking = page.getByRole('button', { name: 'Hand tracking' });
+    await expect(handTracking).toBeEnabled();
+    await handTracking.click();
+    await expect(handTracking).toHaveAttribute('aria-pressed', 'true');
     await expect(
       page.getByRole('button', { name: 'Show overlay' }),
     ).toBeDisabled();
+    const trackingCamera = page.locator('video[data-hand-tracking-camera]');
+    await expect
+      .poll(() =>
+        trackingCamera.evaluate(
+          (video: HTMLVideoElement) =>
+            (video.srcObject as MediaStream | null)?.getVideoTracks()[0]
+              ?.readyState,
+        ),
+      )
+      .toBe('live');
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
+
+    await handTracking.click();
+    await expect
+      .poll(() =>
+        trackingCamera.evaluate((video: HTMLVideoElement) => video.srcObject),
+      )
+      .toBeNull();
+    await expect(camera).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('Then the whiteboard button opens a whiteboard that can be closed', async ({
@@ -250,7 +259,7 @@ test.describe('Given a user is in a HandyMeet room', () => {
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
 
     await expect(heading).toBeHidden();
-    await expect(page).toHaveURL(/\/room\//);
+    await expect(page).toHaveURL(/\/room$/);
     await expect(microphoneButton(page)).toBeEnabled();
   });
 
