@@ -3,6 +3,7 @@
 import {
   CarouselLayout,
   Chat,
+  ChatEntry,
   ConnectionStateToast,
   FocusLayout,
   FocusLayoutContainer,
@@ -21,6 +22,7 @@ import {
   useLocalParticipant,
 } from '@livekit/components-react';
 import type {
+  ChatEntryProps,
   TrackReference,
   TrackReferenceOrPlaceholder,
   WidgetState,
@@ -29,7 +31,6 @@ import { RoomEvent, Track } from 'livekit-client';
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -58,6 +59,13 @@ const initialWidgetState: WidgetState = {
   showSettings: false,
   unreadMessages: 0,
 };
+
+function NamedChatEntry({ entry, ...props }: Partial<ChatEntryProps>) {
+  // Chat injects each message into its child template when rendering.
+  if (!entry) return null;
+
+  return <ChatEntry {...props} entry={entry} hideName={false} />;
+}
 
 function isSameTrack(
   track: TrackReferenceOrPlaceholder,
@@ -278,11 +286,6 @@ export default function MeetingRoom({
     [transcriptions, gestureTranscriptEntries, getParticipantName],
   );
 
-  const transcriptLines = useMemo(
-    () => buildTranscriptLines(),
-    [buildTranscriptLines],
-  );
-
   // The LiveKit agent owns extraction and broadcasts updates to every client.
   const liveActionItems = useLiveActionItems({
     room,
@@ -414,7 +417,9 @@ export default function MeetingRoom({
                 }
               : {}),
           }}
-        />
+        >
+          <NamedChatEntry />
+        </Chat>
       </LayoutContextProvider>
 
       {insightsEnabled && (
