@@ -11,7 +11,7 @@ const USER_COUNT = 5;
 /**
  * How long to wait for an individual user's room UI to become ready.
  * LiveKit WebRTC handshake + token fetch + React render can take several
- * seconds, especially with 10 browser contexts alive simultaneously.
+ * seconds, especially with 5 browser contexts alive simultaneously.
  */
 const PER_USER_READY_TIMEOUT = 30_000;
 
@@ -64,7 +64,7 @@ async function createFakeUser(
  *
  * Both the URL assertion and the Captions visibility check use
  * PER_USER_READY_TIMEOUT. The URL check needs an explicit timeout because
- * Playwright's default (5 s) is too short when 10 browser contexts are live
+ * Playwright's default (5 s) is too short when 5 browser contexts are live
  * and the dev server is under load.
  */
 async function joinRoom(page: Page, username: string, roomCode: string) {
@@ -82,7 +82,7 @@ async function joinRoom(page: Page, username: string, roomCode: string) {
 }
 
 test.describe('multi-user media stress test', () => {
-  test('connects 10 users with fake camera and microphone media', async ({
+  test('connects 5 users with fake camera and microphone media', async ({
     browser,
   }) => {
     test.setTimeout(TEST_TIMEOUT);
